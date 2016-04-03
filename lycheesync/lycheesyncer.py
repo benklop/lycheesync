@@ -48,7 +48,7 @@ class LycheeSyncer:
         """
 
         for url in filelist:
-            if isAPhoto(url):
+            if isAPhoto(self, url):
                 thumbpath = os.path.join(self.conf["lycheepath"], "uploads", "thumb", url)
                 filesplit = os.path.splitext(url)
                 thumb2path = ''.join([filesplit[0], "@2x", filesplit[1]]).lower()
@@ -106,7 +106,7 @@ class LycheeSyncer:
                 album['photos'] = []  # path relative to srcdir
 
                 # if a there is at least one photo in the files
-                if any([isAPhoto(f) for f in files]):
+                if any([isAPhoto(self, f) for f in files]):
                     album['path'] = root
 
                     # don't know what to do with theses photo
@@ -120,7 +120,7 @@ class LycheeSyncer:
                     # Fill in other album properties
                     # albumnames start at srcdir (to avoid absolute path albumname)
                     album['relpath'] = os.path.relpath(album['path'], self.conf['srcdir'])
-                    album['name'] = getAlbumNameFromPath(album)
+                    album['name'] = getAlbumNameFromPath(self, album)
 
                     if len(album['name']) > album_name_max_width:
                         logger.warn("album name too long, will be truncated " + album['name'])
@@ -139,7 +139,7 @@ class LycheeSyncer:
 
                     if not (album['id']):
                         # create album
-                        album['id'] = createAlbum(album)
+                        album['id'] = createAlbum(self, album)
 
                         if not (album['id']):
                             logger.error("didn't manage to create album for: " + album['relpath'])
@@ -152,7 +152,7 @@ class LycheeSyncer:
                     # Albums are created or emptied, now take care of photos
                     for f in sorted(files):
 
-                        if isAPhoto(f):
+                        if isAPhoto(self, f):
                             try:
                                 discoveredphotos += 1
                                 error = False
@@ -165,8 +165,8 @@ class LycheeSyncer:
                                 # corruption detected here by launching exception
                                 photo = LycheePhoto(self.conf, f, album)
                                 if not (self.dao.photoExists(photo)):
-                                    adjustRotation(photo)
-                                    makeThumbnail(photo)
+                                    adjustRotation(self, photo)
+                                    makeThumbnail(self, photo)
                                     res = self.dao.addFileToAlbum(photo)
                                     # increment counter
                                     if res:
@@ -211,7 +211,7 @@ class LycheeSyncer:
                     logger.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
         if self.conf['sort']:
-            reorderalbumids(albums)
+            reorderalbumids(self, albums)
             self.dao.reinitAlbumAutoIncrement()
 
         if self.conf['sanity']:
@@ -258,7 +258,7 @@ class LycheeSyncer:
                     # if any of it is False remove and log
                     to_delete.append(p)
 
-            deletePhotos(to_delete)
+            deletePhotos(self, to_delete)
 
             # Detect broken symlinks / orphan files
             for root, dirs, files in os.walk(os.path.join(self.conf['lycheepath'], 'uploads', 'big')):
@@ -278,7 +278,7 @@ class LycheeSyncer:
                         # if exists in db
                         if id:
                             ps = {'id': id, 'url': file_name}
-                            deletePhotos([ps])
+                            deletePhotos(self, [ps])
                         else:
                             self.deleteFiles([file_name])
                         logger.info("%s deleted. Was a broken link", f)
@@ -301,7 +301,7 @@ class LycheeSyncer:
         except KeyboardInterrupt:
             observer.stop()
         observer.join()
-        updateAlbumsDate(albums)
+        updateAlbumsDate(self, albums)
 
         self.dao.close()
 
@@ -326,15 +326,15 @@ class MyEventHandler(PatternMatchingEventHandler):
             photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
             dbPhoto = self.dao.get_photo(photo)
             delete = [dbPhoto]
-            deletePhotos(delete)
+            deletePhotos(self, delete)
 
             dirs = event.dest_path.split(os.sep)
             albDir = os.sep.join(dirs[:-1])
             album = self.getAlbum(albDir)
             photo = LycheePhoto(LycheeSyncer.conf, event.dest_path, album)
             if not (self.dao.photoExists(photo)):
-                adjustRotation(photo)
-                makeThumbnail(photo)
+                adjustRotation(self, photo)
+                makeThumbnail(self, photo)
                 res = self.dao.addFileToAlbum(photo)
                 # increment counter
                 if not res:
@@ -362,8 +362,8 @@ class MyEventHandler(PatternMatchingEventHandler):
             album = self.getAlbum(albDir)
             photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
             if not (self.dao.photoExists(photo)):
-                adjustRotation(photo)
-                makeThumbnail(photo)
+                adjustRotation(self, photo)
+                makeThumbnail(self, photo)
                 res = self.dao.addFileToAlbum(photo)
                 # increment counter
                 if not res:
@@ -384,7 +384,7 @@ class MyEventHandler(PatternMatchingEventHandler):
         if event.is_directory:
             album = self.getAlbum(event.src_path)
             filelist = self.dao.eraseAlbum(album['id'])
-            deleteFiles(filelist)
+            deleteFiles(self, filelist)
             assert self.dao.dropAlbum(album['id'])
             return
         else:
@@ -394,7 +394,7 @@ class MyEventHandler(PatternMatchingEventHandler):
             photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
             dbPhoto = self.dao.get_photo(photo)
             delete = [dbPhoto]
-            deletePhotos(delete)
+            deletePhotos(self, delete)
 
             return
 
@@ -411,15 +411,15 @@ class MyEventHandler(PatternMatchingEventHandler):
             photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
             dbPhoto = self.dao.get_photo(photo)
             delete = [dbPhoto]
-            deletePhotos(delete)
+            deletePhotos(self, delete)
 
             dirs = event.dest_path.split(os.sep)
             albDir = os.sep.join(dirs[:-1])
             album = self.getAlbum(albDir)
             photo = LycheePhoto(LycheeSyncer.conf, event.dest_path, album)
             if not (self.dao.photoExists(photo)):
-                adjustRotation(photo)
-                makeThumbnail(photo)
+                adjustRotation(self, photo)
+                makeThumbnail(self, photo)
                 res = self.dao.addFileToAlbum(photo)
                 # increment counter
                 if not res:

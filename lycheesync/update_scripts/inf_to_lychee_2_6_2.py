@@ -20,6 +20,7 @@ def __generateHash(filepath):
     return checksum
 
 
+# noinspection PyArgumentList
 def updatedb(conf_data):
     print("updatedb")
 
