@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 # in this exemple: initialize configuration borg for the whole test session
 
 
+# noinspection PyUnusedLocal
 def pytest_report_header(config):
     """ return a string in test report header """
     return "Hey this are the tests"
@@ -28,6 +29,7 @@ def pytest_addoption(parser):
         help="configuration full path")
 
 
+# noinspection PyUnusedLocal
 @pytest.fixture(scope="function")
 def clean(request):
     """ will be run for each test function see pytest.ini """
@@ -37,12 +39,14 @@ def clean(request):
     tu.clean_fs()
 
 
+# noinspection PyUnusedLocal
 @pytest.fixture(scope="function")
 def carriagereturn(request):
     """ will be run for each test function see pytest.ini """
     print(" ")
 
 
+# noinspection PyUnusedLocal
 @pytest.fixture(scope="session")
 def initdb_and_fs(request):
     pass
@@ -54,6 +58,7 @@ def initdb_and_fs(request):
     # tu.make_fake_lychee_fs(tu.conf['lycheepath'])
 
 
+# noinspection PyUnusedLocal
 @pytest.fixture(scope="session")
 def initloggers(request):
     print("#FIXTURE: initloggers")

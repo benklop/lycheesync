@@ -16,12 +16,12 @@ import piexif
 logger = logging.getLogger(__name__)
 
 
+# noinspection PyUnusedLocal,PyUnusedLocal,PyUnusedLocal,PyUnusedLocal,PyUnusedLocal,PyUnusedLocal,PyUnusedLocal,PyUnusedLocal
 @pytest.mark.usefixtures("clean")
 @pytest.mark.usefixtures("initdb_and_fs")
 @pytest.mark.usefixtures("confborg")
 @pytest.mark.usefixtures("initloggers")
 class TestClass:
-
     def check_grand_total(self, expected_albums, expected_photos):
 
         tu = TestUtils()
@@ -247,7 +247,7 @@ class TestClass:
             assert tu.check_album_size("album3") == 4, "album 3 not correctly loaded"
             # album 1 has been deleted
             a1_check = tu.album_exists_in_db("album1")
-            assert not(a1_check), "album 1  still exists"
+            assert not (a1_check), "album 1  still exists"
 
             expected_albums = 1
             expected_photos = 4
@@ -367,7 +367,7 @@ class TestClass:
 
         # check if files are links
         dest = os.path.join(lych, "uploads", "big")
-        not_dir = [x for x in os.listdir(dest) if not(os.path.isdir(x))]
+        not_dir = [x for x in os.listdir(dest) if not (os.path.isdir(x))]
         for f in not_dir:
             full_path = os.path.join(dest, f)
             assert os.path.islink(full_path), "this file {} is not a link".format(full_path)
@@ -436,7 +436,7 @@ class TestClass:
         # no import
         assert tu.count_fs_photos() == 0, "there are photos are in fs"
         assert tu.count_db_photos() == 0, "there are photos are in db"
-        assert not(tu.album_exists_in_db("empty_album")), "empty_album in db"
+        assert not (tu.album_exists_in_db("empty_album")), "empty_album in db"
 
     def test_long_album(self):
         tu = TestUtils()
@@ -549,7 +549,7 @@ class TestClass:
         assert creation_date > launch_date, "creation date should be now"
 
     def test_invalid_taketime(self):
-            # load "bad taketime"  album name
+        # load "bad taketime"  album name
         tu = TestUtils()
         assert tu.is_env_clean(tu.conf['lycheepath']), "env not clean"
         # load 1 album with same photo under different name
@@ -791,7 +791,7 @@ class TestClass:
         os.symlink(a_photo_3, a_link_3)
         os.remove(a_photo_3)
         assert os.path.islink(a_link_3), "{} should be a link".format(a_link_3)
-        assert not(os.path.exists(a_link_3)), "{} should be a broken link".format(a_link_3)
+        assert not (os.path.exists(a_link_3)), "{} should be a broken link".format(a_link_3)
         try:
             db = tu._connect_db()
 
@@ -831,18 +831,18 @@ class TestClass:
         # FS
 
         # no broken symlink
-        assert not(os.path.lexists(a_link_3)), "{} should have been deleted as a broken link".format(a_link_3)
-        assert not(os.path.islink(a_link_3)), "{} should have been deleted".format(a_link_3)
+        assert not (os.path.lexists(a_link_3)), "{} should have been deleted as a broken link".format(a_link_3)
+        assert not (os.path.islink(a_link_3)), "{} should have been deleted".format(a_link_3)
 
         # no orphan link
-        assert not(os.path.lexists(a_link_1)), "{} should have been deleted as a broken link".format(a_link_1)
-        assert not(os.path.lexists(a_link_2)), "{} should have been deleted as a broken link".format(a_link_2)
+        assert not (os.path.lexists(a_link_1)), "{} should have been deleted as a broken link".format(a_link_1)
+        assert not (os.path.lexists(a_link_2)), "{} should have been deleted as a broken link".format(a_link_2)
 
         # no orphan photo
-        assert not(os.path.exists(a_photo_1)), "{} should have been deleted as a orphan".format(a_photo_1)
-        assert not(os.path.exists(a_photo_2)), "{} should have been deleted as an orphan".format(a_photo_2)
-        assert not(os.path.exists(a_photo_3)), "{} should have been deleted as an orphan".format(a_photo_3)
-        assert not(os.path.exists(a_photo_4)), "{} should have been deleted as an orphan".format(a_photo_4)
+        assert not (os.path.exists(a_photo_1)), "{} should have been deleted as a orphan".format(a_photo_1)
+        assert not (os.path.exists(a_photo_2)), "{} should have been deleted as an orphan".format(a_photo_2)
+        assert not (os.path.exists(a_photo_3)), "{} should have been deleted as an orphan".format(a_photo_3)
+        assert not (os.path.exists(a_photo_4)), "{} should have been deleted as an orphan".format(a_photo_4)
 
     def test_visually_check_logs(self):
         # load "bad taketime"  album name

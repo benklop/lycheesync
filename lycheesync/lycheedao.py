@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 class LycheeDAO:
-
     """
     Implements linking with Lychee DB
     """
@@ -94,8 +93,6 @@ class LycheeDAO:
         min_album_query = "select min(id) as min from lychee_albums"
         max_album_query = "select max(id) as max from lychee_albums"
         try:
-            min = -1
-            max = -1
             cur = self.db.cursor()
 
             cur.execute(min_album_query)
@@ -284,22 +281,29 @@ class LycheeDAO:
         """
         album['id'] = None
 
-        query = ("insert into lychee_albums (title, sysstamp, public, password) values ('{}',{},'{}',NULL)".format(
-            album['name'],
-            datetime.datetime.now().strftime('%s'),
-            str(self.conf["publicAlbum"]))
+        query = (
+            "insert into lychee_albums (title, sysstamp, public, password,parents) values ('{}',{},'{}',NULL,'{}')"
+                .format(
+                album['name'],
+                datetime.datetime.now().strftime('%s'),
+                str(self.conf["publicAlbum"]),
+                album['parents'])
         )
 
-        cur = None
         try:
             cur = self.db.cursor()
             logger.debug("try to createAlbum: %s", query)
-            cur.execute("insert into lychee_albums (title, sysstamp, public, password) values (%s,%s,%s,NULL)", (album[
-                        'name'], datetime.datetime.now().strftime('%s'), str(self.conf["publicAlbum"])))
+            cur.execute(
+                "insert into lychee_albums (title, sysstamp, public, password,parents) values ('{}',{},'{}',NULL,'{}')",
+                (
+                    album['name'],
+                    datetime.datetime.now().strftime('%s'),
+                    str(self.conf["publicAlbum"]),
+                    album['parents'])
+            )
             self.db.commit()
-
-            cur.execute("select id from lychee_albums where title=%s", (album['name']))
-            row = cur.fetchone()
+            row = []
+            row['id'] = cur.lastrowid
             self.albumslist['name'] = row['id']
             album['id'] = row['id']
 
@@ -335,6 +339,20 @@ class LycheeDAO:
         finally:
             return res
 
+    def setAlbumParentAndTitle(self, title, parents, id):
+        res = True
+        album_query = "update lychee_albums set title = '" + str(title) + "',parents='" + str(
+            parents) + "' where id = " + str(id)
+        try:
+            cur = self.db.cursor()
+            cur.execute(album_query)
+            self.db.commit()
+        except Exception as e:
+            logger.exception(e)
+            res = False
+        finally:
+            return res
+
     def dropAlbum(self, album_id):
         res = False
         query = "delete from lychee_albums where id = " + str(album_id) + ''
@@ -364,13 +382,45 @@ class LycheeDAO:
         finally:
             return res
 
+    def get_photo(self, photo):
+        p = {}
+        try:
+            cur = self.db.cursor()
+            cur.execute(
+                "select * from lychee_photos where album=%s AND (title=%s OR checksum=%s)",
+                (photo.albumid,
+                 photo.originalname,
+                 photo.checksum))
+            rows = cur.fetchone()
+            for row in rows:
+                p['url'] = row['url']
+                p['id'] = row['id']
+                p['album'] = row['album']
+        except Exception as e:
+            logger.exception(e)
+        finally:
+            return p
+
+    def rename_photo(self, photo_id, new_name):
+        res = True
+        album_query = "update lychee_phots set title = '" + str(new_name) + "' where id = " + str(photo_id)
+        try:
+            cur = self.db.cursor()
+            cur.execute(album_query)
+            self.db.commit()
+        except Exception as e:
+            logger.exception(e)
+            res = False
+        finally:
+            return res
+
     def get_all_photos(self, album_id=None):
         """
         Lists all photos in leeche db (used to delete all files)
         Return a photo url list
         """
         res = []
-        if not(album_id):
+        if not (album_id):
             selquery = "select id, url, album  from lychee_photos"
         else:
             selquery = "select id, url, album  from lychee_photos where album={}".format(album_id)
@@ -380,10 +430,7 @@ class LycheeDAO:
             cur.execute(selquery)
             rows = cur.fetchall()
             for row in rows:
-                p = {}
-                p['url'] = row['url']
-                p['id'] = row['id']
-                p['album'] = row['album']
+                p = {'url': row['url'], 'id': row['id'], 'album': row['album']}
                 res.append(p)
         except Exception as e:
             logger.exception(e)
@@ -407,6 +454,22 @@ class LycheeDAO:
         finally:
             return res
 
+    def get_album_id(self, album_name, parent_id):
+        res = None
+        try:
+            # check if exists in db
+            sql = "select id from lychee_albums WHERE title={} AND parent={}".format(album_name, parent_id)
+            with self.db.cursor() as cursor:
+                cursor.execute(sql)
+                rows = cursor.fetchone()
+            res = rows
+        except Exception as e:
+            # logger.exception(e)
+            res = None
+            raise e
+        finally:
+            return res
+
     def get_album_ids_titles(self):
         res = None
         try:
@@ -423,6 +486,28 @@ class LycheeDAO:
         finally:
             return res
 
+    def get_album_parents(self, album_id=0):
+        res = None
+        try:
+            # check if exists in db
+            sql = "select parent from lychee_albums where id={}".format(album_id)
+            with self.db.cursor() as cursor:
+                cursor.execute(sql)
+                rows = cursor.fetchone()
+                parents = rows['parent'].split(',')
+                for parent in parents:
+                    sql = "select id, title from lychee_albums where id={}".format(parent)
+                    with self.db.cursor() as cursor2:
+                        cursor2.execute(sql)
+                        rows = cursor2.fetchall()
+                    res = rows
+        except Exception as e:
+            # logger.exception(e)
+            res = None
+            raise e
+        finally:
+            return res
+
     def addFileToAlbum(self, photo):
         """
         Add a photo to an album
@@ -431,10 +516,6 @@ class LycheeDAO:
         Returns a boolean
         """
         res = True
-        try:
-            stamp = parse(photo.exif.takedate + ' ' + photo.exif.taketime).strftime('%s')
-        except Exception as e:
-            stamp = datetime.datetime.now().strftime('%s')
 
         query = ("insert into lychee_photos " +
                  "(id, url, public, type, width, height, " +

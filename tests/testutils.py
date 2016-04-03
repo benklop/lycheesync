@@ -16,8 +16,8 @@ import pymysql.cursors
 logger = logging.getLogger(__name__)
 
 
+# noinspection PyUnusedLocal,PyUnusedLocal
 class TestUtils:
-
     def __init__(self):
         self.db = None
         self.cb = TestBorg()
@@ -48,26 +48,21 @@ class TestUtils:
 
     def make_fake_lychee_fs(self, path):
 
-        if not(os.path.isdir(os.path.join(path, 'uploads', 'big'))):
+        if not (os.path.isdir(os.path.join(path, 'uploads', 'big'))):
             uploads = os.path.join(path, 'uploads')
             os.mkdir(path)
             os.mkdir(uploads)
-            paths = []
-            paths.append(os.path.join(uploads, 'big'))
-            paths.append(os.path.join(uploads, 'thumb'))
-            paths.append(os.path.join(uploads, 'medium'))
+            paths = [os.path.join(uploads, 'big'), os.path.join(uploads, 'thumb'), os.path.join(uploads, 'medium')]
             for p in paths:
-                if not(os.path.isdir(p)):
+                if not (os.path.isdir(p)):
                     logger.info('mkdir ' + p)
                     os.mkdir(p)
 
     def is_env_clean(self, path):
         check = []
         try:
-            folders = {}
-            folders['big'] = os.path.join(path, 'uploads', 'big')
-            folders['medium'] = os.path.join(path, 'uploads', 'medium')
-            folders['thumb'] = os.path.join(path, 'uploads', 'thumb')
+            folders = {'big': os.path.join(path, 'uploads', 'big'), 'medium': os.path.join(path, 'uploads', 'medium'),
+                       'thumb': os.path.join(path, 'uploads', 'thumb')}
             # is dir
             check.append(os.path.isdir(folders['big']))
             check.append(os.path.isdir(folders['medium']))
@@ -95,7 +90,7 @@ class TestUtils:
         finally:
             res = True
             for c in check:
-                if not(c):
+                if not (c):
                     res = False
             return res
 
@@ -108,7 +103,7 @@ class TestUtils:
                                           passwd=self.cb.conf['dbPassword'],
                                           charset='utf8mb4',
                                           cursorclass=pymysql.cursors.DictCursor)
-            # check if db exists
+                # check if db exists
                 sql = "DROP DATABASE " + self.cb.conf['db']
                 with self.db.cursor() as cursor:
                     cursor.execute(sql)
@@ -362,7 +357,7 @@ class TestUtils:
             # don't count index.html
             path = os.path.join(path, 'index.html')
             if os.path.isfile(path):
-                res = res - 1
+                res -= 1
         except Exception as e:
             logger.exception(e)
             assert False
@@ -408,9 +403,11 @@ class TestUtils:
         try:
             # check if exists in db
             if a_id:
-                sql = "select id, title, url, iso, aperture, shutter, focal  from lychee_photos where album='{}'".format(a_id)
+                sql = "select id, title, url, iso, aperture, shutter, focal  from lychee_photos where album='{}'".format(
+                    a_id)
             elif p_id:
-                sql = "select id, title, url, iso, aperture, shutter, focal  from lychee_photos where id='{}'".format(p_id)
+                sql = "select id, title, url, iso, aperture, shutter, focal  from lychee_photos where id='{}'".format(
+                    p_id)
             else:
                 sql = "select id, title, url, iso, aperture, shutter, focal  from lychee_photos"
 
@@ -419,14 +416,8 @@ class TestUtils:
                 rows = cursor.fetchall()
                 res = []
                 for r in rows:
-                    photo = {}
-                    photo['url'] = r['url']
-                    photo['id'] = r['id']
-                    photo['iso'] = r['iso']
-                    photo['aperture'] = r['aperture']
-                    photo['shutter'] = r['shutter']
-                    photo['focal'] = r['focal']
-                    photo['title'] = r['title']
+                    photo = {'url': r['url'], 'id': r['id'], 'iso': r['iso'], 'aperture': r['aperture'],
+                             'shutter': r['shutter'], 'focal': r['focal'], 'title': r['title']}
                     res.append(photo)
         except Exception as e:
             logger.exception(e)
@@ -495,7 +486,7 @@ class TestUtils:
             # check if files exists on fs
             for p in photos:
                 assert self.photo_exists_in_fs(p['url']), "All photos for {} are not on fs".format(photos)
-            #  every thing is ok
+            # every thing is ok
             res = nb_photos_in_db
         except Exception as e:
             logger.exception(e)

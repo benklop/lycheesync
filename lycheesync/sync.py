@@ -38,7 +38,8 @@ logger = logging.getLogger(__name__)
                 type=click.Path(exists=True, resolve_path=True))
 # checks file existence and attributes
 # @click.argument('file2', type=click.Path(exists=True, file_okay=True, dir_okay=False, writable=False, readable=True, resolve_path=True))
-def main(verbose, exclusive_mode, sort_album_by_name, sanitycheck, link, updatedb26, imagedirpath, lycheepath, confpath):
+def main(verbose, exclusive_mode, sort_album_by_name, sanitycheck, link, updatedb26, imagedirpath, lycheepath,
+         confpath):
     """Lycheesync
 
     A script to synchronize any directory containing photos with Lychee.
@@ -50,13 +51,8 @@ def main(verbose, exclusive_mode, sort_album_by_name, sanitycheck, link, updated
         lycheepath = lycheepath.decode('UTF-8')
         confpath = confpath.decode('UTF-8')
 
-    conf_data = {}
-    conf_data['verbose'] = verbose
-    conf_data["srcdir"] = imagedirpath
-    conf_data["lycheepath"] = lycheepath
-    conf_data['confpath'] = confpath
-    conf_data["dropdb"] = False
-    conf_data["replace"] = False
+    conf_data = {'verbose': verbose, "srcdir": imagedirpath, "lycheepath": lycheepath, 'confpath': confpath,
+                 "dropdb": False, "replace": False}
 
     if exclusive_mode == "delete":
         conf_data["dropdb"] = True

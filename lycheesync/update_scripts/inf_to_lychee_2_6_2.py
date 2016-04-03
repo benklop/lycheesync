@@ -13,7 +13,6 @@ import traceback
 
 # Compute checksum
 def __generateHash(filepath):
-    checksum = None
     sha1 = hashlib.sha1()
     with open(filepath, 'rb') as f:
         sha1.update(f.read())

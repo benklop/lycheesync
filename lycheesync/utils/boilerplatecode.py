@@ -48,7 +48,7 @@ def script_init(cli_args):
     else:
         # default value
         logging.basicConfig(level=logging.DEBUG)
-        logging.warn("**** logging conf -> default conf")
+        logging.warning("**** logging conf -> default conf")
 
     # read application configuration
     if os.path.exists(cli_args['confpath']):
@@ -63,7 +63,6 @@ def script_init(cli_args):
 
     # initialize conf with items loaded from conf file AND command lines arguments
     # cli args have priority over configuration file
-    z = {}
     z = conf.copy()
     z.update(cli_args)
     borg = ConfBorg(z)

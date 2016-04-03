@@ -93,10 +93,8 @@ class LycheePhoto:
         # logger.debug("convert_strdate input: " + str(value))
         # logger.debug("convert_strdate input_type: " + str(type(value)))
 
-        timestamp = None
         # now in epoch time
         epoch_now = int(time.time())
-        timestamp = epoch_now
 
         if isinstance(value, int):
             timestamp = value
@@ -105,16 +103,6 @@ class LycheePhoto:
         elif value:
 
             value = str(value)
-
-            try:
-                the_date = parse(value)
-                # works for python 3
-                # timestamp = the_date.timestamp()
-                timestamp = time.mktime(the_date.timetuple())
-
-            except Exception as e:
-                logger.warn('model date impossible to parse: ' + str(value))
-                timestamp = epoch_now
         else:
             # Value is None
             timestamp = epoch_now
@@ -154,7 +142,7 @@ class LycheePhoto:
             r = str(r)
             # last missing_char char
             filler = r[-missing_char:]
-            self.id = self.id + filler
+            self.id += filler
 
         assert len(self.id) == 14, "id {} is not 14 character long: {}".format(self.id, str(len(self.id)))
 
@@ -242,29 +230,16 @@ class LycheePhoto:
                             self.exif.shutter = str(s) + " s"
 
                         if decode == "DateTimeOriginal":
-                            try:
-                                self.exif.takedate = value[0].split(" ")[0]
-                            except Exception as e:
-                                logger.warn('invalid takedate: ' + str(value) + ' for ' + self.srcfullpath)
+                            pass
 
                         if decode == "DateTimeOriginal":
-                            try:
-                                self.exif.taketime = value[0].split(" ")[1]
-                            except Exception as e:
-                                logger.warn('invalid taketime: ' + str(value) + ' for ' + self.srcfullpath)
+                            pass
 
                         if decode == "DateTime" and self.exif.takedate is None:
-                            try:
-                                self.exif.takedate = value.split(" ")[0]
-                            except Exception as e:
-                                logger.warn('DT invalid takedate: ' + str(value) + ' for ' + self.srcfullpath)
+                            pass
 
                         if decode == "DateTime" and self.exif.taketime is None:
-                            try:
-                                self.exif.taketime = value.split(" ")[1]
-                            except Exception as e:
-                                logger.warn('DT invalid taketime: ' + str(value) + ' for ' + self.srcfullpath)
-
+                            pass
                     # compute shutter speed
 
                     if not(self.exif.shutter) and self.exif.exposure:
