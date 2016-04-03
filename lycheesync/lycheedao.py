@@ -294,7 +294,7 @@ class LycheeDAO:
             cur = self.db.cursor()
             logger.debug("try to createAlbum: %s", query)
             cur.execute(
-                "insert into lychee_albums (title, sysstamp, public, password,parent) values ('{}',{},'{}',NULL,'{}')",
+                "insert into lychee_albums (title, sysstamp, public, password,parent) values (%s,%s,%s,NULL,%s)",
                 (
                     album['name'],
                     datetime.datetime.now().strftime('%s'),
