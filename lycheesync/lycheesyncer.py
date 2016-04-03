@@ -493,6 +493,7 @@ def createAlbum(self, album):
     - album: an album properties list. at least path should be specified (relative albumpath)
     Returns an albumid or None if album does not exists
     """
+    album['parent'] = 0;
     album['id'] = None
     if album['name'] != "":
         album['id'] = self.dao.createAlbum(album)
