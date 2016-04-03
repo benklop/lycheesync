@@ -48,7 +48,7 @@ class LycheeSyncer:
         """
 
         for url in filelist:
-            if self.isAPhoto(url):
+            if isAPhoto(url):
                 thumbpath = os.path.join(self.conf["lycheepath"], "uploads", "thumb", url)
                 filesplit = os.path.splitext(url)
                 thumb2path = ''.join([filesplit[0], "@2x", filesplit[1]]).lower()
@@ -106,7 +106,7 @@ class LycheeSyncer:
                 album['photos'] = []  # path relative to srcdir
 
                 # if a there is at least one photo in the files
-                if any([self.isAPhoto(f) for f in files]):
+                if any([isAPhoto(f) for f in files]):
                     album['path'] = root
 
                     # don't know what to do with theses photo
@@ -120,7 +120,7 @@ class LycheeSyncer:
                     # Fill in other album properties
                     # albumnames start at srcdir (to avoid absolute path albumname)
                     album['relpath'] = os.path.relpath(album['path'], self.conf['srcdir'])
-                    album['name'] = self.getAlbumNameFromPath(album)
+                    album['name'] = getAlbumNameFromPath(album)
 
                     if len(album['name']) > album_name_max_width:
                         logger.warn("album name too long, will be truncated " + album['name'])
@@ -139,7 +139,7 @@ class LycheeSyncer:
 
                     if not (album['id']):
                         # create album
-                        album['id'] = self.createAlbum(album)
+                        album['id'] = createAlbum(album)
 
                         if not (album['id']):
                             logger.error("didn't manage to create album for: " + album['relpath'])
@@ -152,7 +152,7 @@ class LycheeSyncer:
                     # Albums are created or emptied, now take care of photos
                     for f in sorted(files):
 
-                        if self.isAPhoto(f):
+                        if isAPhoto(f):
                             try:
                                 discoveredphotos += 1
                                 error = False
@@ -165,8 +165,8 @@ class LycheeSyncer:
                                 # corruption detected here by launching exception
                                 photo = LycheePhoto(self.conf, f, album)
                                 if not (self.dao.photoExists(photo)):
-                                    self.adjustRotation(photo)
-                                    self.makeThumbnail(photo)
+                                    adjustRotation(photo)
+                                    makeThumbnail(photo)
                                     res = self.dao.addFileToAlbum(photo)
                                     # increment counter
                                     if res:
@@ -211,7 +211,7 @@ class LycheeSyncer:
                     logger.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
         if self.conf['sort']:
-            self.reorderalbumids(albums)
+            reorderalbumids(albums)
             self.dao.reinitAlbumAutoIncrement()
 
         if self.conf['sanity']:
@@ -258,7 +258,7 @@ class LycheeSyncer:
                     # if any of it is False remove and log
                     to_delete.append(p)
 
-            self.deletePhotos(to_delete)
+            deletePhotos(to_delete)
 
             # Detect broken symlinks / orphan files
             for root, dirs, files in os.walk(os.path.join(self.conf['lycheepath'], 'uploads', 'big')):
@@ -278,7 +278,7 @@ class LycheeSyncer:
                         # if exists in db
                         if id:
                             ps = {'id': id, 'url': file_name}
-                            self.deletePhotos([ps])
+                            deletePhotos([ps])
                         else:
                             self.deleteFiles([file_name])
                         logger.info("%s deleted. Was a broken link", f)
@@ -301,7 +301,7 @@ class LycheeSyncer:
         except KeyboardInterrupt:
             observer.stop()
         observer.join()
-        self.updateAlbumsDate(albums)
+        updateAlbumsDate(albums)
 
         self.dao.close()
 
@@ -326,15 +326,15 @@ class MyEventHandler(PatternMatchingEventHandler):
             photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
             dbPhoto = self.dao.get_photo(photo)
             delete = [dbPhoto]
-            self.deletePhotos(delete)
+            deletePhotos(delete)
 
             dirs = event.dest_path.split(os.sep)
             albDir = os.sep.join(dirs[:-1])
             album = self.getAlbum(albDir)
             photo = LycheePhoto(LycheeSyncer.conf, event.dest_path, album)
             if not (self.dao.photoExists(photo)):
-                self.adjustRotation(photo)
-                self.makeThumbnail(photo)
+                adjustRotation(photo)
+                makeThumbnail(photo)
                 res = self.dao.addFileToAlbum(photo)
                 # increment counter
                 if not res:
@@ -362,8 +362,8 @@ class MyEventHandler(PatternMatchingEventHandler):
             album = self.getAlbum(albDir)
             photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
             if not (self.dao.photoExists(photo)):
-                self.adjustRotation(photo)
-                self.makeThumbnail(photo)
+                adjustRotation(photo)
+                makeThumbnail(photo)
                 res = self.dao.addFileToAlbum(photo)
                 # increment counter
                 if not res:
@@ -384,7 +384,7 @@ class MyEventHandler(PatternMatchingEventHandler):
         if event.is_directory:
             album = self.getAlbum(event.src_path)
             filelist = self.dao.eraseAlbum(album['id'])
-            self.deleteFiles(filelist)
+            deleteFiles(filelist)
             assert self.dao.dropAlbum(album['id'])
             return
         else:
@@ -394,7 +394,7 @@ class MyEventHandler(PatternMatchingEventHandler):
             photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
             dbPhoto = self.dao.get_photo(photo)
             delete = [dbPhoto]
-            self.deletePhotos(delete)
+            deletePhotos(delete)
 
             return
 
@@ -411,15 +411,15 @@ class MyEventHandler(PatternMatchingEventHandler):
             photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
             dbPhoto = self.dao.get_photo(photo)
             delete = [dbPhoto]
-            self.deletePhotos(delete)
+            deletePhotos(delete)
 
             dirs = event.dest_path.split(os.sep)
             albDir = os.sep.join(dirs[:-1])
             album = self.getAlbum(albDir)
             photo = LycheePhoto(LycheeSyncer.conf, event.dest_path, album)
             if not (self.dao.photoExists(photo)):
-                self.adjustRotation(photo)
-                self.makeThumbnail(photo)
+                adjustRotation(photo)
+                makeThumbnail(photo)
                 res = self.dao.addFileToAlbum(photo)
                 # increment counter
                 if not res:
@@ -448,259 +448,272 @@ class MyEventHandler(PatternMatchingEventHandler):
 
         return album
 
-    def getAlbumNameFromPath(self, album):
-        """
-        build a lychee compatible albumname from an albumpath (relative to the srcdir main argument)
-        Takes an album properties list  as input. At least the path sould be specified (relative albumpath)
-        Returns a string, the lychee album name
-        """
-        # make a list with directory and sub dirs
-        alb_path_utf8 = album['relpath']  # .decode('UTF-8')
 
-        path = alb_path_utf8.split(os.sep)
+def getAlbumNameFromPath(self, album):
+    """
+    build a lychee compatible albumname from an albumpath (relative to the srcdir main argument)
+    Takes an album properties list  as input. At least the path sould be specified (relative albumpath)
+    Returns a string, the lychee album name
+    """
+    # make a list with directory and sub dirs
+    alb_path_utf8 = album['relpath']  # .decode('UTF-8')
 
-        # join the rest: no subfolders in lychee yet
-        if len(path) > 1:
-            album['name'] = "_".join(path)
+    path = alb_path_utf8.split(os.sep)
+
+    # join the rest: no subfolders in lychee yet
+    if len(path) > 1:
+        album['name'] = "_".join(path)
+    else:
+        album['name'] = alb_path_utf8
+    return album['name']
+
+
+def isAPhoto(self, file):
+    """
+    Determine if the filename passed is a photo or not based on the file extension
+    Takes a string  as input (a file name)
+    Returns a boolean
+    """
+    validimgext = ['.jpg', '.jpeg', '.gif', '.png']
+    ext = os.path.splitext(file)[-1].lower()
+    return (ext in validimgext)
+
+
+def albumExists(self, album):
+    """
+    Takes an album properties list  as input. At least the relpath sould be specified (relative albumpath)
+    Returns an albumid or None if album does not exists
+    """
+
+
+def createAlbum(self, album):
+    """
+    Creates an album
+    Inputs:
+    - album: an album properties list. at least path should be specified (relative albumpath)
+    Returns an albumid or None if album does not exists
+    """
+    album['id'] = None
+    if album['name'] != "":
+        album['id'] = self.dao.createAlbum(album)
+    return album['id']
+
+
+def thumbIt(self, res, photo, destinationpath, destfile):
+    """
+    Create the thumbnail of a given photo
+    Parameters:
+    - res: should be a set of h and v res (640, 480)
+    - photo: a valid LycheePhoto object
+    - destinationpath: a string the destination full path of the thumbnail (without filename)
+    - destfile: the thumbnail filename
+    Returns the fullpath of the thuumbnail
+    """
+
+    if photo.width > photo.height:
+        delta = photo.width - photo.height
+        left = int(delta / 2)
+        upper = 0
+        right = int(photo.height + left)
+        lower = int(photo.height)
+    else:
+        delta = photo.height - photo.width
+        left = 0
+        upper = int(delta / 2)
+        right = int(photo.width)
+        lower = int(photo.width + upper)
+
+    destimage = os.path.join(destinationpath, destfile)
+    try:
+        img = Image.open(photo.destfullpath)
+    except Exception as e:
+        logger.exception(e)
+        logger.error("ioerror (corrupted file?): " + photo.srcfullpath)
+        raise
+
+    img = img.crop((left, upper, right, lower))
+    img.thumbnail(res, Image.ANTIALIAS)
+    img.save(destimage, quality=99)
+    return destimage
+
+
+def makeThumbnail(self, photo):
+    """
+    Make the 2 thumbnails needed by Lychee for a given photo
+    and store their path in the LycheePhoto object
+    Parameters:
+    - photo: a valid LycheePhoto object
+    returns nothing
+    """
+    # set  thumbnail size
+    sizes = [(200, 200), (400, 400)]
+    # insert @2x in big thumbnail file name
+    filesplit = os.path.splitext(photo.url)
+    destfiles = [photo.url, ''.join([filesplit[0], "@2x", filesplit[1]]).lower()]
+    # compute destination path
+    destpath = os.path.join(self.conf["lycheepath"], "uploads", "thumb")
+    # make thumbnails
+    photo.thumbnailfullpath = self.thumbIt(sizes[0], photo, destpath, destfiles[0])
+    photo.thumbnailx2fullpath = self.thumbIt(sizes[1], photo, destpath, destfiles[1])
+
+
+def copyFileToLychee(self, photo):
+    """
+    add a file to an album, the albumid must be previously stored in the LycheePhoto parameter
+    Parameters:
+    - photo: a valid LycheePhoto object
+    Returns True if everything went ok
+    """
+
+    try:
+        # copy photo
+        if self.conf['link']:
+            os.symlink(photo.srcfullpath, photo.destfullpath)
         else:
-            album['name'] = alb_path_utf8
+            shutil.copy(photo.srcfullpath, photo.destfullpath)
+        # adjust right (chmod/chown)
+        res = True
+
+    except Exception as e:
+        logger.exception(e)
+        res = False
+
+    return res
+
+
+def deleteFiles(self, filelist):
+    """
+    Delete files in the Lychee file tree (uploads/big and uploads/thumbnails)
+    Give it the file name and it will delete relatives files and thumbnails
+    Parameters:
+    - filelist: a list of filenames
+    Returns nothing
+    """
+
+    for url in filelist:
+        if self.isAPhoto(url):
+            thumbpath = os.path.join(self.conf["lycheepath"], "uploads", "thumb", url)
+            filesplit = os.path.splitext(url)
+            thumb2path = ''.join([filesplit[0], "@2x", filesplit[1]]).lower()
+            thumb2path = os.path.join(self.conf["lycheepath"], "uploads", "thumb", thumb2path)
+            bigpath = os.path.join(self.conf["lycheepath"], "uploads", "big", url)
+            remove_file(thumbpath)
+            remove_file(thumb2path)
+            remove_file(bigpath)
+
+
+def adjustRotation(self, photo):
+    """
+    Rotates photos according to the exif orientaion tag
+    Returns nothing DOIT BEFORE THUMBNAILS !!!
+    """
+
+    if photo.exif.orientation != 1:
+
+        img = Image.open(photo.destfullpath)
+        if "exif" in img.info:
+            exif_dict = piexif.load(img.info["exif"])
+
+            if piexif.ImageIFD.Orientation in exif_dict["0th"]:
+                orientation = exif_dict["0th"][piexif.ImageIFD.Orientation]
+
+                if orientation == 2:
+                    img = img.transpose(Image.FLIP_LEFT_RIGHT)
+                elif orientation == 3:
+                    img = img.rotate(180)
+                elif orientation == 4:
+                    img = img.rotate(180).transpose(Image.FLIP_LEFT_RIGHT)
+                elif orientation == 5:
+                    img = img.rotate(-90, expand=True).transpose(Image.FLIP_LEFT_RIGHT)
+                elif orientation == 6:
+                    img = img.rotate(-90, expand=True)
+                elif orientation == 7:
+                    img = img.rotate(90, expand=True).transpose(Image.FLIP_LEFT_RIGHT)
+                elif orientation == 8:
+                    img = img.rotate(90, expand=True)
+                else:
+                    if orientation != 1:
+                        logger.warn("Orientation not defined {} for photo {}".format(orientation, photo.title))
+
+                if orientation in [5, 6, 7, 8]:
+                    # invert width and height
+                    h = photo.height
+                    w = photo.width
+                    photo.height = w
+                    photo.width = h
+                exif_dict["0th"][piexif.ImageIFD.Orientation] = 1
+                exif_bytes = piexif.dump(exif_dict)
+                img.save(photo.destfullpath, exif=exif_bytes, quality=99)
+        img.close()
+
+
+def reorderalbumids(self, albums):
+    # sort albums by title
+    def getName(album):
         return album['name']
 
-    def isAPhoto(self, file):
-        """
-        Determine if the filename passed is a photo or not based on the file extension
-        Takes a string  as input (a file name)
-        Returns a boolean
-        """
-        validimgext = ['.jpg', '.jpeg', '.gif', '.png']
-        ext = os.path.splitext(file)[-1].lower()
-        return (ext in validimgext)
+    sortedalbums = sorted(albums, key=getName)
 
-    def albumExists(self, album):
-        """
-        Takes an album properties list  as input. At least the relpath sould be specified (relative albumpath)
-        Returns an albumid or None if album does not exists
-        """
+    # count albums
+    nbalbum = len(albums)
+    # get higher album id + 1 as a first new album id
+    min, max = self.dao.getAlbumMinMaxIds()
 
-    def createAlbum(self, album):
-        """
-        Creates an album
-        Inputs:
-        - album: an album properties list. at least path should be specified (relative albumpath)
-        Returns an albumid or None if album does not exists
-        """
-        album['id'] = None
-        if album['name'] != "":
-            album['id'] = self.dao.createAlbum(album)
-        return album['id']
+    if min and max:
 
-    def thumbIt(self, res, photo, destinationpath, destfile):
-        """
-        Create the thumbnail of a given photo
-        Parameters:
-        - res: should be a set of h and v res (640, 480)
-        - photo: a valid LycheePhoto object
-        - destinationpath: a string the destination full path of the thumbnail (without filename)
-        - destfile: the thumbnail filename
-        Returns the fullpath of the thuumbnail
-        """
-
-        if photo.width > photo.height:
-            delta = photo.width - photo.height
-            left = int(delta / 2)
-            upper = 0
-            right = int(photo.height + left)
-            lower = int(photo.height)
+        if nbalbum + 1 < min:
+            newid = 1
         else:
-            delta = photo.height - photo.width
-            left = 0
-            upper = int(delta / 2)
-            right = int(photo.width)
-            lower = int(photo.width + upper)
+            newid = max + 1
 
-        destimage = os.path.join(destinationpath, destfile)
+        for a in sortedalbums:
+            self.dao.changeAlbumId(a['id'], newid)
+            newid += 1
+
+
+def updateAlbumsDate(self, albums):
+    now = datetime.datetime.now()
+    last2min = now - datetime.timedelta(minutes=2)
+    last2min_epoch = int((last2min - datetime.datetime(1970, 1, 1)).total_seconds())
+
+    for a in albums:
         try:
-            img = Image.open(photo.destfullpath)
+            # get photos with a real date (not just now)
+
+            if len(a['photos']) > 0:
+
+                datelist = [
+                    photo.epoch_sysdate for photo in a['photos'] if photo.epoch_sysdate < last2min_epoch]
+
+                if datelist is not None and len(datelist) > 0:
+                    newdate = max(datelist)
+                    self.dao.updateAlbumDate(a['id'], newdate)
+                    logger.debug(
+                        "album %s sysstamp changed to: %s ", a['name'], str(
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S', time.localtime(newdate))))
         except Exception as e:
             logger.exception(e)
-            logger.error("ioerror (corrupted file?): " + photo.srcfullpath)
-            raise
+            logger.error("updating album date for album:" + a['name'], e)
 
-        img = img.crop((left, upper, right, lower))
-        img.thumbnail(res, Image.ANTIALIAS)
-        img.save(destimage, quality=99)
-        return destimage
 
-    def makeThumbnail(self, photo):
-        """
-        Make the 2 thumbnails needed by Lychee for a given photo
-        and store their path in the LycheePhoto object
-        Parameters:
-        - photo: a valid LycheePhoto object
-        returns nothing
-        """
-        # set  thumbnail size
-        sizes = [(200, 200), (400, 400)]
-        # insert @2x in big thumbnail file name
-        filesplit = os.path.splitext(photo.url)
-        destfiles = [photo.url, ''.join([filesplit[0], "@2x", filesplit[1]]).lower()]
-        # compute destination path
-        destpath = os.path.join(self.conf["lycheepath"], "uploads", "thumb")
-        # make thumbnails
-        photo.thumbnailfullpath = self.thumbIt(sizes[0], photo, destpath, destfiles[0])
-        photo.thumbnailx2fullpath = self.thumbIt(sizes[1], photo, destpath, destfiles[1])
+def deleteAllFiles(self):
+    """
+    Deletes every photo file in Lychee
+    Returns nothing
+    """
+    photopath = os.path.join(self.conf["lycheepath"], "uploads", "big")
+    filelist = [f for f in os.listdir(photopath)]
+    self.deleteFiles(filelist)
 
-    def copyFileToLychee(self, photo):
-        """
-        add a file to an album, the albumid must be previously stored in the LycheePhoto parameter
-        Parameters:
-        - photo: a valid LycheePhoto object
-        Returns True if everything went ok
-        """
 
-        try:
-            # copy photo
-            if self.conf['link']:
-                os.symlink(photo.srcfullpath, photo.destfullpath)
-            else:
-                shutil.copy(photo.srcfullpath, photo.destfullpath)
-            # adjust right (chmod/chown)
-            res = True
-
-        except Exception as e:
-            logger.exception(e)
-            res = False
-
-        return res
-
-    def deleteFiles(self, filelist):
-        """
-        Delete files in the Lychee file tree (uploads/big and uploads/thumbnails)
-        Give it the file name and it will delete relatives files and thumbnails
-        Parameters:
-        - filelist: a list of filenames
-        Returns nothing
-        """
-
-        for url in filelist:
-            if self.isAPhoto(url):
-                thumbpath = os.path.join(self.conf["lycheepath"], "uploads", "thumb", url)
-                filesplit = os.path.splitext(url)
-                thumb2path = ''.join([filesplit[0], "@2x", filesplit[1]]).lower()
-                thumb2path = os.path.join(self.conf["lycheepath"], "uploads", "thumb", thumb2path)
-                bigpath = os.path.join(self.conf["lycheepath"], "uploads", "big", url)
-                remove_file(thumbpath)
-                remove_file(thumb2path)
-                remove_file(bigpath)
-
-    def adjustRotation(self, photo):
-        """
-        Rotates photos according to the exif orientaion tag
-        Returns nothing DOIT BEFORE THUMBNAILS !!!
-        """
-
-        if photo.exif.orientation != 1:
-
-            img = Image.open(photo.destfullpath)
-            if "exif" in img.info:
-                exif_dict = piexif.load(img.info["exif"])
-
-                if piexif.ImageIFD.Orientation in exif_dict["0th"]:
-                    orientation = exif_dict["0th"][piexif.ImageIFD.Orientation]
-
-                    if orientation == 2:
-                        img = img.transpose(Image.FLIP_LEFT_RIGHT)
-                    elif orientation == 3:
-                        img = img.rotate(180)
-                    elif orientation == 4:
-                        img = img.rotate(180).transpose(Image.FLIP_LEFT_RIGHT)
-                    elif orientation == 5:
-                        img = img.rotate(-90, expand=True).transpose(Image.FLIP_LEFT_RIGHT)
-                    elif orientation == 6:
-                        img = img.rotate(-90, expand=True)
-                    elif orientation == 7:
-                        img = img.rotate(90, expand=True).transpose(Image.FLIP_LEFT_RIGHT)
-                    elif orientation == 8:
-                        img = img.rotate(90, expand=True)
-                    else:
-                        if orientation != 1:
-                            logger.warn("Orientation not defined {} for photo {}".format(orientation, photo.title))
-
-                    if orientation in [5, 6, 7, 8]:
-                        # invert width and height
-                        h = photo.height
-                        w = photo.width
-                        photo.height = w
-                        photo.width = h
-                    exif_dict["0th"][piexif.ImageIFD.Orientation] = 1
-                    exif_bytes = piexif.dump(exif_dict)
-                    img.save(photo.destfullpath, exif=exif_bytes, quality=99)
-            img.close()
-
-    def reorderalbumids(self, albums):
-        # sort albums by title
-        def getName(album):
-            return album['name']
-
-        sortedalbums = sorted(albums, key=getName)
-
-        # count albums
-        nbalbum = len(albums)
-        # get higher album id + 1 as a first new album id
-        min, max = self.dao.getAlbumMinMaxIds()
-
-        if min and max:
-
-            if nbalbum + 1 < min:
-                newid = 1
-            else:
-                newid = max + 1
-
-            for a in sortedalbums:
-                self.dao.changeAlbumId(a['id'], newid)
-                newid += 1
-
-    def updateAlbumsDate(self, albums):
-        now = datetime.datetime.now()
-        last2min = now - datetime.timedelta(minutes=2)
-        last2min_epoch = int((last2min - datetime.datetime(1970, 1, 1)).total_seconds())
-
-        for a in albums:
-            try:
-                # get photos with a real date (not just now)
-
-                if len(a['photos']) > 0:
-
-                    datelist = [
-                        photo.epoch_sysdate for photo in a['photos'] if photo.epoch_sysdate < last2min_epoch]
-
-                    if datelist is not None and len(datelist) > 0:
-                        newdate = max(datelist)
-                        self.dao.updateAlbumDate(a['id'], newdate)
-                        logger.debug(
-                            "album %s sysstamp changed to: %s ", a['name'], str(
-                                time.strftime(
-                                    '%Y-%m-%d %H:%M:%S', time.localtime(newdate))))
-            except Exception as e:
-                logger.exception(e)
-                logger.error("updating album date for album:" + a['name'], e)
-
-    def deleteAllFiles(self):
-        """
-        Deletes every photo file in Lychee
-        Returns nothing
-        """
-        photopath = os.path.join(self.conf["lycheepath"], "uploads", "big")
-        filelist = [f for f in os.listdir(photopath)]
-        self.deleteFiles(filelist)
-
-    def deletePhotos(self, photo_list):
-        """photo_list: a list of dictionnary containing key url and id"""
-        if len(photo_list) > 0:
-            url_list = [p['url'] for p in photo_list]
-            self.deleteFiles(url_list)
-            for p in photo_list:
-                self.dao.dropPhoto(p['id'])
+def deletePhotos(self, photo_list):
+    """photo_list: a list of dictionnary containing key url and id"""
+    if len(photo_list) > 0:
+        url_list = [p['url'] for p in photo_list]
+        self.deleteFiles(url_list)
+        for p in photo_list:
+            self.dao.dropPhoto(p['id'])
 
 
 def remove_file(path):
