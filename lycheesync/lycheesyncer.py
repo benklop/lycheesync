@@ -91,7 +91,7 @@ class LycheeSyncer:
             album_name_max_width = self.dao.getAlbumNameDBWidth()
 
             # walkthroug each file / dir of the srcdir
-            for root, dirs, files in os.walk(self.conf['srcdir']):
+            for root, dirs, files in os.walk(self.conf['srcdir'], topdown=True):
 
                 if sys.version_info.major == 2:
                     try:
