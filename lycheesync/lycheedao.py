@@ -302,10 +302,10 @@ class LycheeDAO:
                     str(album['parent']))
             )
             self.db.commit()
-            row = []
-            row['id'] = cur.lastrowid
-            self.albumslist['name'] = row['id']
-            album['id'] = row['id']
+            rowId = None
+            rowId = cur.lastrowid
+            self.albumslist['name'] = rowId
+            album['id'] = rowId
 
         except Exception as e:
             logger.exception(e)
