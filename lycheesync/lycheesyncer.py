@@ -107,7 +107,7 @@ class LycheeSyncer:
                 album = getAlbum(self, root)
                 # if a there is at least one photo in the files
                 if any([isAPhoto(self, f) for f in files]):
-
+                    album['path'] = root
                     # don't know what to do with theses photo
                     # and don't wan't to create a default album
                     if album['path'] == self.conf['srcdir']:
