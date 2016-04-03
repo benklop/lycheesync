@@ -103,7 +103,7 @@ class LycheeSyncer:
                 album['name'] = None
                 album['path'] = None
                 album['relpath'] = None  # path relative to srcdir
-                album['photos'] = []  # path relative to srcdir
+                album['photos'] = []# path relative to srcdir
                 album = getAlbum(self, root)
                 # if a there is at least one photo in the files
                 if any([isAPhoto(self, f) for f in files]):
@@ -424,17 +424,19 @@ class MyEventHandler(PatternMatchingEventHandler):
                     photo.srcfullpath)
             return
 
+
 def getAlbum(self, directory):
-    album = {'id': None, 'name': None, 'photos': [], 'parent': [0]}
+    album = {'id': None, 'name': None, 'photos': [], 'parent': ['0']}
 
     dirs = directory.split(os.sep)
-    parents = [0]
+    parents = ['0']
     for title in dirs:
         album['name'] = title
         if self.dao.albumExists(album):
             album['id'] = self.dao.get_album_id(title, ','.join(parents))
-            parents.append(album['id'])
+            parents.append(str(album['id']))
             album['parent'] = ','.join(parents)
+    album['parent'] = ','.join(parents)
 
     return album
 

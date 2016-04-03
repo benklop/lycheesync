@@ -299,7 +299,7 @@ class LycheeDAO:
                     album['name'],
                     datetime.datetime.now().strftime('%s'),
                     str(self.conf["publicAlbum"]),
-                    album['parent'])
+                    str(album['parent']))
             )
             self.db.commit()
             row = []
