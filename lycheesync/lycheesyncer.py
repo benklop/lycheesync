@@ -133,7 +133,7 @@ class LycheeSyncer:
                         album['id'] = createAlbum(self, album)
 
                         if not (album['id']):
-                            logger.error("didn't manage to create album for: " + album['relpath'])
+                            logger.error("didn't manage to create album for: " + album['name'])
                             continue
                         else:
                             logger.info("############ Album created: %s", album['name'])
@@ -483,7 +483,6 @@ def createAlbum(self, album):
     - album: an album properties list. at least path should be specified (relative albumpath)
     Returns an albumid or None if album does not exists
     """
-    album['parent'] = 0;
     album['id'] = None
     if album['name'] != "":
         album['id'] = self.dao.createAlbum(album)
