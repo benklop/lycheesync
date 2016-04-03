@@ -427,7 +427,6 @@ class MyEventHandler(PatternMatchingEventHandler):
 def getAlbum(self, directory):
     album = {'id': None, 'name': None, 'photos': [], 'parent': [0]}
 
-    self.dao = LycheeDAO(LycheeSyncer.conf)
     dirs = directory.split(os.sep)
     parents = [0]
     for title in dirs:
