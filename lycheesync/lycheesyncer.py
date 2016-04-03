@@ -317,7 +317,7 @@ class MyEventHandler(PatternMatchingEventHandler):
         if event.is_directory:
             albSrc = self.getAlbum(event.src_path)
             albDest = self.getAlbum(event.dest_path)
-            self.dao.setAlbumParentAndTitle(albDest['title'], albDest['parents'], albSrc['id'])
+            self.dao.setAlbumParentAndTitle(albDest['title'], albDest['parent'], albSrc['id'])
             return
         else:
             dirs = event.src_path.split(os.sep)
@@ -434,7 +434,7 @@ class MyEventHandler(PatternMatchingEventHandler):
             return
 
     def getAlbum(self, directory):
-        album = {'id': None, 'name': None, 'photos': [], 'parents': [0]}
+        album = {'id': None, 'name': None, 'photos': [], 'parent': [0]}
 
         self.dao = LycheeDAO(LycheeSyncer.conf)
         dirs = directory.split(os.sep)
@@ -444,7 +444,7 @@ class MyEventHandler(PatternMatchingEventHandler):
             if self.dao.albumExists(album):
                 album['id'] = self.dao.get_album_id(title, ','.join(parents))
                 parents.append(album['id'])
-                album['parents'] = ','.join(parents)
+                album['parent'] = ','.join(parents)
 
         return album
 
