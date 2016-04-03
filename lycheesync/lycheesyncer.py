@@ -156,6 +156,7 @@ class LycheeSyncer:
                                 # corruption detected here by launching exception
                                 photo = LycheePhoto(self.conf, f, album)
                                 if not (self.dao.photoExists(photo)):
+                                    res = copyFileToLychee(self, photo)
                                     adjustRotation(self, photo)
                                     makeThumbnail(self, photo)
                                     res = self.dao.addFileToAlbum(photo)
@@ -324,6 +325,8 @@ class MyEventHandler(PatternMatchingEventHandler):
             album = getAlbum(self, albDir)
             photo = LycheePhoto(LycheeSyncer.conf, event.dest_path, album)
             if not (self.dao.photoExists(photo)):
+                res = copyFileToLychee(self, photo)
+
                 adjustRotation(self, photo)
                 makeThumbnail(self, photo)
                 res = self.dao.addFileToAlbum(photo)
@@ -353,6 +356,8 @@ class MyEventHandler(PatternMatchingEventHandler):
             album = getAlbum(self, albDir)
             photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
             if not (self.dao.photoExists(photo)):
+                res = copyFileToLychee(self, photo)
+
                 adjustRotation(self, photo)
                 makeThumbnail(self, photo)
                 res = self.dao.addFileToAlbum(photo)
@@ -409,6 +414,8 @@ class MyEventHandler(PatternMatchingEventHandler):
             album = getAlbum(self, albDir)
             photo = LycheePhoto(LycheeSyncer.conf, event.dest_path, album)
             if not (self.dao.photoExists(photo)):
+                res = copyFileToLychee(self, photo)
+
                 adjustRotation(self, photo)
                 makeThumbnail(self, photo)
                 res = self.dao.addFileToAlbum(photo)
