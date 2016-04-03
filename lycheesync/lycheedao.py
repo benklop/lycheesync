@@ -375,7 +375,7 @@ class LycheeDAO:
             cur = self.db.cursor()
             cur.execute(query)
             self.db.commit()
-            logger.debug("photo dropped: %s", album_id)
+            logger.debug("photo dropped: %s", photo_id)
             res = True
         except Exception as e:
             logger.exception(e)
@@ -516,6 +516,12 @@ class LycheeDAO:
         Returns a boolean
         """
         res = True
+
+
+        try:
+            stamp = parse(photo.exif.takedate + ' ' + photo.exif.taketime).strftime('%s')
+        except Exception as e:
+            stamp = datetime.datetime.now().strftime('%s')
 
         query = ("insert into lychee_photos " +
                  "(id, url, public, type, width, height, " +
