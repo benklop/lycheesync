@@ -545,8 +545,8 @@ def makeThumbnail(self, photo):
     # compute destination path
     destpath = os.path.join(self.conf["lycheepath"], "uploads", "thumb")
     # make thumbnails
-    photo.thumbnailfullpath = self.thumbIt(sizes[0], photo, destpath, destfiles[0])
-    photo.thumbnailx2fullpath = self.thumbIt(sizes[1], photo, destpath, destfiles[1])
+    photo.thumbnailfullpath = thumbIt(self,sizes[0], photo, destpath, destfiles[0])
+    photo.thumbnailx2fullpath = thumbIt(self,sizes[1], photo, destpath, destfiles[1])
 
 
 def copyFileToLychee(self, photo):
@@ -583,7 +583,7 @@ def deleteFiles(self, filelist):
     """
 
     for url in filelist:
-        if self.isAPhoto(url):
+        if isAPhoto(self,url):
             thumbpath = os.path.join(self.conf["lycheepath"], "uploads", "thumb", url)
             filesplit = os.path.splitext(url)
             thumb2path = ''.join([filesplit[0], "@2x", filesplit[1]]).lower()
