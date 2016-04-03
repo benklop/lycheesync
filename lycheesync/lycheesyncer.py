@@ -104,10 +104,9 @@ class LycheeSyncer:
                 album['path'] = None
                 album['relpath'] = None  # path relative to srcdir
                 album['photos'] = []  # path relative to srcdir
-
+                album = getAlbum(self, root)
                 # if a there is at least one photo in the files
                 if any([isAPhoto(self, f) for f in files]):
-                    album['path'] = root
 
                     # don't know what to do with theses photo
                     # and don't wan't to create a default album
@@ -117,15 +116,7 @@ class LycheeSyncer:
                         logger.warn(msg)
                         continue
 
-                    # Fill in other album properties
-                    # albumnames start at srcdir (to avoid absolute path albumname)
-                    album['relpath'] = os.path.relpath(album['path'], self.conf['srcdir'])
-                    album['name'] = getAlbumNameFromPath(self, album)
 
-                    if len(album['name']) > album_name_max_width:
-                        logger.warn("album name too long, will be truncated " + album['name'])
-                        album['name'] = album['name'][0:album_name_max_width]
-                        logger.warn("album name is now " + album['name'])
 
                     album['id'] = self.dao.albumExists(album)
 
@@ -315,14 +306,14 @@ class MyEventHandler(PatternMatchingEventHandler):
         self.conf = LycheeSyncer.conf
 
         if event.is_directory:
-            albSrc = self.getAlbum(event.src_path)
-            albDest = self.getAlbum(event.dest_path)
+            albSrc = getAlbum(self, event.src_path)
+            albDest = getAlbum(self, event.dest_path)
             self.dao.setAlbumParentAndTitle(albDest['title'], albDest['parent'], albSrc['id'])
             return
         else:
             dirs = event.src_path.split(os.sep)
             albDir = os.sep.join(dirs[:-1])
-            album = self.getAlbum(albDir)
+            album = getAlbum(self, albDir)
             photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
             dbPhoto = self.dao.get_photo(photo)
             delete = [dbPhoto]
@@ -330,7 +321,7 @@ class MyEventHandler(PatternMatchingEventHandler):
 
             dirs = event.dest_path.split(os.sep)
             albDir = os.sep.join(dirs[:-1])
-            album = self.getAlbum(albDir)
+            album = getAlbum(self, albDir)
             photo = LycheePhoto(LycheeSyncer.conf, event.dest_path, album)
             if not (self.dao.photoExists(photo)):
                 adjustRotation(self, photo)
@@ -353,13 +344,13 @@ class MyEventHandler(PatternMatchingEventHandler):
 
         self.dao = LycheeDAO(LycheeSyncer.conf)
         if event.is_directory:
-            album = self.getAlbum(event.src_path)
+            album = getAlbum(self, event.src_path)
             self.dao.createAlbum(album)
             return
         else:
             dirs = event.src_path.split(os.sep)
             albDir = os.sep.join(dirs[:-1])
-            album = self.getAlbum(albDir)
+            album = getAlbum(self, albDir)
             photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
             if not (self.dao.photoExists(photo)):
                 adjustRotation(self, photo)
@@ -382,7 +373,7 @@ class MyEventHandler(PatternMatchingEventHandler):
 
         self.dao = LycheeDAO(LycheeSyncer.conf)
         if event.is_directory:
-            album = self.getAlbum(event.src_path)
+            album = getAlbum(self, event.src_path)
             filelist = self.dao.eraseAlbum(album['id'])
             deleteFiles(self, filelist)
             assert self.dao.dropAlbum(album['id'])
@@ -390,7 +381,7 @@ class MyEventHandler(PatternMatchingEventHandler):
         else:
             dirs = event.src_path.split(os.sep)
             albDir = os.sep.join(dirs[:-1])
-            album = self.getAlbum(albDir)
+            album = getAlbum(self, albDir)
             photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
             dbPhoto = self.dao.get_photo(photo)
             delete = [dbPhoto]
@@ -407,7 +398,7 @@ class MyEventHandler(PatternMatchingEventHandler):
         else:
             dirs = event.src_path.split(os.sep)
             albDir = os.sep.join(dirs[:-1])
-            album = self.getAlbum(albDir)
+            album = getAlbum(self, albDir)
             photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
             dbPhoto = self.dao.get_photo(photo)
             delete = [dbPhoto]
@@ -415,7 +406,7 @@ class MyEventHandler(PatternMatchingEventHandler):
 
             dirs = event.dest_path.split(os.sep)
             albDir = os.sep.join(dirs[:-1])
-            album = self.getAlbum(albDir)
+            album = getAlbum(self, albDir)
             photo = LycheePhoto(LycheeSyncer.conf, event.dest_path, album)
             if not (self.dao.photoExists(photo)):
                 adjustRotation(self, photo)
@@ -433,20 +424,20 @@ class MyEventHandler(PatternMatchingEventHandler):
                     photo.srcfullpath)
             return
 
-    def getAlbum(self, directory):
-        album = {'id': None, 'name': None, 'photos': [], 'parent': [0]}
+def getAlbum(self, directory):
+    album = {'id': None, 'name': None, 'photos': [], 'parent': [0]}
 
-        self.dao = LycheeDAO(LycheeSyncer.conf)
-        dirs = directory.split(os.sep)
-        parents = [0]
-        for title in dirs:
-            album['name'] = title
-            if self.dao.albumExists(album):
-                album['id'] = self.dao.get_album_id(title, ','.join(parents))
-                parents.append(album['id'])
-                album['parent'] = ','.join(parents)
+    self.dao = LycheeDAO(LycheeSyncer.conf)
+    dirs = directory.split(os.sep)
+    parents = [0]
+    for title in dirs:
+        album['name'] = title
+        if self.dao.albumExists(album):
+            album['id'] = self.dao.get_album_id(title, ','.join(parents))
+            parents.append(album['id'])
+            album['parent'] = ','.join(parents)
 
-        return album
+    return album
 
 
 def getAlbumNameFromPath(self, album):
