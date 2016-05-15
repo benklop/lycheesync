@@ -1,16 +1,22 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import unicode_literals
 from __future__ import print_function
-from watchdog.events import PatternMatchingEventHandler
-from watchdog.observers import Observer
+from __future__ import unicode_literals
+
 import os
 import shutil
-import stat
+
+from PIL import Image
+from PIL import ImageFile
+from pathtools.patterns import match_path
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+
 from lycheesync.lycheedao import LycheeDAO
 from lycheesync.lycheemodel import LycheePhoto
 from lycheesync.utils.configuration import ConfBorg
-from PIL import Image
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 import datetime
 import time
 import sys
@@ -171,7 +177,7 @@ class LycheeSyncer:
                                             album['name'],
                                             photo.srcfullpath)
                                 else:
-                                    logger.error(
+                                    logger.warn(
                                         "photo already exists in this album with same name or same checksum: %s it won't be added to lychee",
                                         photo.srcfullpath)
                                     error = True
@@ -201,7 +207,7 @@ class LycheeSyncer:
                         logger.error(
                             str(importedphotos) + " photos imported on " + str(discoveredphotos) + " discovered")
                     logger.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-
+            updateAlbumsDate(self, albums)
         if self.conf['sort']:
             reorderalbumids(self, albums)
             self.dao.reinitAlbumAutoIncrement()
@@ -281,102 +287,103 @@ class LycheeSyncer:
                 for e in empty:
                     self.dao.dropAlbum(e)
 
-        event_handler = MyEventHandler(patterns=['*.jpg', '*.jpeg', '*.gif', '*.png'],
-                                       ignore_directories=True)
-
-        observer = Observer()
-        observer.schedule(event_handler, self.conf['srcdir'], recursive=True)
-        observer.start()
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            observer.stop()
-        observer.join()
-        updateAlbumsDate(self, albums)
-
         self.dao.close()
+        if self.conf['watch']:
+            event_handler = MyEventHandler()
+
+            observer = Observer()
+            observer.schedule(event_handler, self.conf['srcdir'], recursive=True)
+            observer.start()
+            try:
+                while True:
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                observer.stop()
+            observer.join()
 
 
-class MyEventHandler(PatternMatchingEventHandler):
+class MyEventHandler(FileSystemEventHandler):
 
     def catch_all_handler(self, event):
         return
 
     def on_moved(self, event):
-        self.conf = LycheeSyncer.conf
+        borg = ConfBorg()
+        self.conf = borg.conf
+        self.dao = LycheeDAO(self.conf)
 
         if event.is_directory:
+
             albSrc = getAlbum(self, event.src_path)
             albDest = getAlbum(self, event.dest_path)
-            self.dao.setAlbumParentAndTitle(albDest['title'], albDest['parent'], albSrc['id'])
+            self.dao.setAlbumParentAndTitle(albDest['name'], albDest['parent'], albSrc['id'])
             return
         else:
-            dirs = event.src_path.split(os.sep)
-            albDir = os.sep.join(dirs[:-1])
-            album = getAlbum(self, albDir)
-            photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
-            dbPhoto = self.dao.get_photo(photo)
-            delete = [dbPhoto]
-            deletePhotos(self, delete)
+            if match_path(event.src_path,
+                          included_patterns=['*.jpg', '*.jpeg', '*.gif', '*.png'],
+                          excluded_patterns=None,
+                          case_sensitive=False):
+                dirs = event.src_path.split(os.sep)
+                albDir = os.sep.join(dirs[:-1])
+                dirs2 = event.dest_path.split(os.sep)
+                albDir2 = os.sep.join(dirs2[:-1])
+                album = getAlbum(self, albDir)
+                if album['id'] == None:
+                    album = getAlbum(self, albDir2)
 
-            dirs = event.dest_path.split(os.sep)
-            albDir = os.sep.join(dirs[:-1])
-            album = getAlbum(self, albDir)
-            photo = LycheePhoto(LycheeSyncer.conf, event.dest_path, album)
-            if not (self.dao.photoExists(photo)):
-                res = copyFileToLychee(self, photo)
+                dbPhoto = self.dao.get_photo_light(album['id'], os.sep.join(dirs[-1:]), "")
 
-                adjustRotation(self, photo)
-                makeThumbnail(self, photo)
-                res = self.dao.addFileToAlbum(photo)
-                # increment counter
-                if not res:
-                    logger.error(
-                        "while adding to album: %s photo: %s",
-                        album['name'],
-                        photo.srcfullpath)
-            else:
-                logger.error(
-                    "photo already exists in this album with same name or same checksum: %s it won't be added to lychee",
-                    photo.srcfullpath)
+                album2 = getAlbum(self, albDir2)
+
+                self.dao.setPhotoAlbumAndTitle(os.sep.join(dirs2[-1:]), album2['id'], dbPhoto['id'])
+
+
+
             return
 
     def on_created(self, event):
-        self.conf = LycheeSyncer.conf
 
-        self.dao = LycheeDAO(LycheeSyncer.conf)
+        borg = ConfBorg()
+        self.conf = borg.conf
+        self.dao = LycheeDAO(self.conf)
+
         if event.is_directory:
             album = getAlbum(self, event.src_path)
             self.dao.createAlbum(album)
             return
-        else:
-            dirs = event.src_path.split(os.sep)
-            albDir = os.sep.join(dirs[:-1])
-            album = getAlbum(self, albDir)
-            photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
-            if not (self.dao.photoExists(photo)):
-                res = copyFileToLychee(self, photo)
 
-                adjustRotation(self, photo)
-                makeThumbnail(self, photo)
-                res = self.dao.addFileToAlbum(photo)
-                # increment counter
-                if not res:
+        else:
+            if match_path(event.src_path,
+                          included_patterns=['*.jpg', '*.jpeg', '*.gif', '*.png'],
+                          excluded_patterns=None,
+                          case_sensitive=False):
+                dirs = event.src_path.split(os.sep)
+                albDir = os.sep.join(dirs[:-1])
+                album = getAlbum(self, albDir)
+                album['path'] = albDir
+                photo = LycheePhoto(self.conf, os.sep.join(dirs[-1:]), album)
+                if not (self.dao.photoExists(photo)):
+                    res = copyFileToLychee(self, photo)
+
+                    adjustRotation(self, photo)
+                    makeThumbnail(self, photo)
+                    res = self.dao.addFileToAlbum(photo)
+                    # increment counter
+                    if not res:
+                        logger.error(
+                            "while adding to album: %s photo: %s",
+                            album['name'],
+                            photo.srcfullpath)
+                else:
                     logger.error(
-                        "while adding to album: %s photo: %s",
-                        album['name'],
+                        "photo already exists in this album with same name or same checksum: %s it won't be added to lychee",
                         photo.srcfullpath)
-            else:
-                logger.error(
-                    "photo already exists in this album with same name or same checksum: %s it won't be added to lychee",
-                    photo.srcfullpath)
             return
 
     def on_deleted(self, event):
-        self.conf = LycheeSyncer.conf
-
-        self.dao = LycheeDAO(LycheeSyncer.conf)
+        borg = ConfBorg()
+        self.conf = borg.conf
+        self.dao = LycheeDAO(self.conf)
         if event.is_directory:
             album = getAlbum(self, event.src_path)
             filelist = self.dao.eraseAlbum(album['id'])
@@ -384,63 +391,75 @@ class MyEventHandler(PatternMatchingEventHandler):
             assert self.dao.dropAlbum(album['id'])
             return
         else:
-            dirs = event.src_path.split(os.sep)
-            albDir = os.sep.join(dirs[:-1])
-            album = getAlbum(self, albDir)
-            photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
-            dbPhoto = self.dao.get_photo(photo)
-            delete = [dbPhoto]
-            deletePhotos(self, delete)
+            if match_path(event.src_path,
+                          included_patterns=['*.jpg', '*.jpeg', '*.gif', '*.png'],
+                          excluded_patterns=None,
+                          case_sensitive=False):
+                dirs = event.src_path.split(os.sep)
+                albDir = os.sep.join(dirs[:-1])
+                album = getAlbum(self, albDir)
+                album['path'] = albDir
+                dbPhoto = self.dao.get_photo_light(album['id'], os.sep.join(dirs[-1:]), "")
+                delete = [dbPhoto]
+                deletePhotos(self, delete)
 
             return
 
     def on_modified(self, event):
-        self.conf = LycheeSyncer.conf
-
-        self.dao = LycheeDAO(LycheeSyncer.conf)
+        borg = ConfBorg()
+        self.conf = borg.conf
+        self.dao = LycheeDAO(self.conf)
         if event.is_directory:
             return
         else:
-            dirs = event.src_path.split(os.sep)
-            albDir = os.sep.join(dirs[:-1])
-            album = getAlbum(self, albDir)
-            photo = LycheePhoto(LycheeSyncer.conf, event.src_path, album)
-            dbPhoto = self.dao.get_photo(photo)
-            delete = [dbPhoto]
-            deletePhotos(self, delete)
+            if match_path(event.src_path,
+                          included_patterns=['*.jpg', '*.jpeg', '*.gif', '*.png'],
+                          excluded_patterns=None,
+                          case_sensitive=False):
+                dirs = event.src_path.split(os.sep)
+                albDir = os.sep.join(dirs[:-1])
+                album = getAlbum(self, albDir)
+                album['path'] = albDir
+                photo = LycheePhoto(self.conf, os.sep.join(dirs[-1:]), album)
+                dbPhoto = self.dao.get_photo(photo)
+                delete = [dbPhoto]
+                deletePhotos(self, delete)
 
-            dirs = event.dest_path.split(os.sep)
-            albDir = os.sep.join(dirs[:-1])
-            album = getAlbum(self, albDir)
-            photo = LycheePhoto(LycheeSyncer.conf, event.dest_path, album)
-            if not (self.dao.photoExists(photo)):
-                res = copyFileToLychee(self, photo)
+                dirs = event.src_path.split(os.sep)
+                albDir = os.sep.join(dirs[:-1])
+                album = getAlbum(self, albDir)
+                album['path'] = albDir
+                photo = LycheePhoto(self.conf, os.sep.join(dirs[-1:]), album)
+                if not (self.dao.photoExists(photo)):
+                    res = copyFileToLychee(self, photo)
 
-                adjustRotation(self, photo)
-                makeThumbnail(self, photo)
-                res = self.dao.addFileToAlbum(photo)
-                # increment counter
-                if not res:
+                    adjustRotation(self, photo)
+                    makeThumbnail(self, photo)
+                    res = self.dao.addFileToAlbum(photo)
+                    # increment counter
+                    if not res:
+                        logger.error(
+                            "while adding to album: %s photo: %s",
+                            album['name'],
+                            photo.srcfullpath)
+                else:
                     logger.error(
-                        "while adding to album: %s photo: %s",
-                        album['name'],
+                        "photo already exists in this album with same name or same checksum: %s it won't be added to lychee",
                         photo.srcfullpath)
-            else:
-                logger.error(
-                    "photo already exists in this album with same name or same checksum: %s it won't be added to lychee",
-                    photo.srcfullpath)
             return
 
 
 def getAlbum(self, directory):
-    album = {'id': None, 'name': None, 'photos': [], 'parent': ['0']}
+    album = {'id': None, 'name': None, 'photos': [], 'parent': '0'}
 
     dirs = directory.split(os.sep)
     parents = ['0']
     for title in dirs:
+        album['id'] = None
+
         album['name'] = title
-        if self.dao.albumExists(album):
-            album['id'] = self.dao.get_album_id(title, ','.join(parents))
+        if self.dao.albumExistsByNameAndParent(title, album['parent']):
+            album['id'] = self.dao.get_album_id(title, album['parent'])['id']
             parents.append(str(album['id']))
             album['parent'] = ','.join(parents)
     album['parent'] = ','.join(parents)
@@ -703,14 +722,14 @@ def deleteAllFiles(self):
     """
     photopath = os.path.join(self.conf["lycheepath"], "uploads", "big")
     filelist = [f for f in os.listdir(photopath)]
-    self.deleteFiles(filelist)
+    deleteFiles(filelist)
 
 
 def deletePhotos(self, photo_list):
     """photo_list: a list of dictionnary containing key url and id"""
     if len(photo_list) > 0:
         url_list = [p['url'] for p in photo_list]
-        self.deleteFiles(url_list)
+        deleteFiles(self, url_list)
         for p in photo_list:
             self.dao.dropPhoto(p['id'])
 

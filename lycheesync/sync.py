@@ -18,9 +18,11 @@ logger = logging.getLogger(__name__)
 
 
 @click.command()
+@click.option('-w', '--watch', 'exclusive_mode', flag_value='watch', default=True,
+              help='Watch mode exclusive with only watching for filesystem events')
 @click.option('-v', '--verbose', is_flag=True, help='Program verbosity.')
 @click.option('-n', '--normal', 'exclusive_mode', flag_value='normal',
-              default=True, help='normal mode exclusive with replace and delete mode')
+              default=False, help='normal mode exclusive with replace and delete mode')
 @click.option('-r', '--replace', 'exclusive_mode', flag_value='replace',
               default=False, help='delete mode exclusive with replace mode and normal')
 @click.option('-d', '--dropdb', 'exclusive_mode', flag_value='delete',
@@ -52,12 +54,17 @@ def main(verbose, exclusive_mode, sort_album_by_name, sanitycheck, link, updated
         confpath = confpath.decode('UTF-8')
 
     conf_data = {'verbose': verbose, "srcdir": imagedirpath, "lycheepath": lycheepath, 'confpath': confpath,
-                 "dropdb": False, "replace": False}
+                 "dropdb": False, "replace": False, "normal": False, "watch": True}
 
     if exclusive_mode == "delete":
         conf_data["dropdb"] = True
+        conf_data["watch"] = False
     elif exclusive_mode == "replace":
         conf_data["replace"] = True
+        conf_data["watch"] = False
+    elif exclusive_mode == "normal":
+        conf_data["normal"] = True
+        conf_data["watch"] = False
 
     conf_data["user"] = None
     conf_data["group"] = None

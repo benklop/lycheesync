@@ -2,10 +2,12 @@
 
 from __future__ import print_function
 from __future__ import unicode_literals
-import pymysql
+
 import datetime
-import re
 import logging
+import re
+
+import pymysql
 from dateutil.parser import parse
 
 logger = logging.getLogger(__name__)
@@ -29,11 +31,11 @@ class LycheeDAO:
             self.conf = conf
             if 'dbSocket' in self.conf:
                 logger.debug("Connection to db in SOCKET mode")
-                logger.error("host: %s", self.conf['dbHost'])
-                logger.error("user: %s", self.conf['dbUser'])
-                logger.error("password: %s", self.conf['dbPassword'])
-                logger.error("db: %s", self.conf['db'])
-                logger.error("unix_socket: %s", self.conf['dbSocket'])
+                logger.debug("host: %s", self.conf['dbHost'])
+                logger.debug("user: %s", self.conf['dbUser'])
+                logger.debug("password: %s", self.conf['dbPassword'])
+                logger.debug("db: %s", self.conf['db'])
+                logger.debug("unix_socket: %s", self.conf['dbSocket'])
                 self.db = pymysql.connect(host=self.conf['dbHost'],
                                           user=self.conf['dbUser'],
                                           passwd=self.conf['dbPassword'],
@@ -188,13 +190,28 @@ class LycheeDAO:
         finally:
             return res
 
+    def albumExistsByNameAndParent(self, album_name, parent):
+        res = False
+        try:
+            cur = self.db.cursor()
+            cur.execute("select * from lychee_albums where title=%s AND parent=%s", (album_name, parent))
+            row = cur.fetchall()
+            if len(row) != 0:
+                res = True
+        except Exception as e:
+            logger.exception(e)
+        finally:
+            return res
+
     def albumExists(self, album):
         """
         Check if an album exists based on its name
         Parameters: an album properties list. At least the name should be specified
         Returns None or the albumid if it exists
         """
+        self.loadAlbumList()
         logger.debug("exists ? " + str(album))
+
         if album['name'] in self.albumslist.keys():
             return self.albumslist[album['name']]
         else:
@@ -259,7 +276,7 @@ class LycheeDAO:
             rows = cur.fetchall()
             album_ids = [r['album'] for r in rows]
             if len(album_ids) > 0:
-                logger.warn(
+                logger.debug(
                     "a photo with this name: %s or checksum: %s already exists in at least another album: %s",
                     photo.originalname,
                     photo.checksum,
@@ -291,6 +308,7 @@ class LycheeDAO:
         )
 
         try:
+
             cur = self.db.cursor()
             logger.debug("try to createAlbum: %s", query)
             cur.execute(
@@ -304,7 +322,7 @@ class LycheeDAO:
             self.db.commit()
             rowId = None
             rowId = cur.lastrowid
-            self.albumslist['name'] = rowId
+            self.albumslist[album['name']] = rowId
             album['id'] = rowId
 
         except Exception as e:
@@ -332,7 +350,7 @@ class LycheeDAO:
                 res.append(row['url'])
             cur.execute(query)
             self.db.commit()
-            logger.debug("album photos erased: ", album_id)
+            logger.debug("album photos erased: %s", album_id)
         except Exception as e:
             logger.exception(e)
             logger.error("eraseAlbum")
@@ -343,6 +361,20 @@ class LycheeDAO:
         res = True
         album_query = "update lychee_albums set title = '" + str(title) + "',parent='" + str(
             parents) + "' where id = " + str(id)
+        try:
+            cur = self.db.cursor()
+            cur.execute(album_query)
+            self.db.commit()
+        except Exception as e:
+            logger.exception(e)
+            res = False
+        finally:
+            return res
+
+    def setPhotoAlbumAndTitle(self, title, Album, id):
+        res = True
+        album_query = "update lychee_photos set title = '" + str(title) + "',album='" + str(
+            Album) + "' where id='" + str(id) + "'"
         try:
             cur = self.db.cursor()
             cur.execute(album_query)
@@ -391,11 +423,25 @@ class LycheeDAO:
                 (photo.albumid,
                  photo.originalname,
                  photo.checksum))
-            rows = cur.fetchone()
-            for row in rows:
-                p['url'] = row['url']
-                p['id'] = row['id']
-                p['album'] = row['album']
+            row = cur.fetchone()
+            p = {'url': row['url'], 'id': row['id'], 'album': row['album']}
+        except Exception as e:
+            logger.exception(e)
+        finally:
+            return p
+
+    def get_photo_light(self, album, name, checksum):
+        p = {}
+        try:
+            cur = self.db.cursor()
+            cur.execute(
+                "select * from lychee_photos where album=%s AND (title=%s OR checksum=%s)",
+                (album,
+                 name,
+                 checksum))
+            row = cur.fetchone()
+            p = {'url': row['url'], 'id': row['id'], 'album': row['album']}
+
         except Exception as e:
             logger.exception(e)
         finally:
@@ -458,9 +504,9 @@ class LycheeDAO:
         res = None
         try:
             # check if exists in db
-            sql = "select id from lychee_albums WHERE title={} AND parent={}".format(album_name, parent_id)
+            sql = "select id from lychee_albums WHERE title=%s AND parent=%s"
             with self.db.cursor() as cursor:
-                cursor.execute(sql)
+                cursor.execute(sql, (album_name, parent_id))
                 rows = cursor.fetchone()
             res = rows
         except Exception as e:
