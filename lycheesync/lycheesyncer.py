@@ -97,7 +97,7 @@ class LycheeSyncer:
             album_name_max_width = self.dao.getAlbumNameDBWidth()
 
             # walkthroug each file / dir of the srcdir
-            for root, dirs, files in os.walk(self.conf['srcdir'], topdown=True):
+            for root, dirs, files in os.walk(self.conf['srcdir']):
 
                 if sys.version_info.major == 2:
                     try:
@@ -109,104 +109,103 @@ class LycheeSyncer:
                 album['name'] = None
                 album['path'] = None
                 album['relpath'] = None  # path relative to srcdir
+                album['parent'] = "0"
                 album['photos'] = []# path relative to srcdir
                 album = getAlbum(self, root)
                 # if a there is at least one photo in the files
-                if any([isAPhoto(self, f) for f in files]):
-                    album['path'] = root
-                    # don't know what to do with theses photo
-                    # and don't wan't to create a default album
-                    if album['path'] == self.conf['srcdir']:
-                        msg = "file at srcdir root won't be added to lychee, please move them in a subfolder: {}".format(
-                            root)
-                        logger.warn(msg)
-                        continue
 
+                album['path'] = root
+                # don't know what to do with theses photo
+                # and don't wan't to create a default album
+                if album['path'] == self.conf['srcdir']:
+                    msg = "file at srcdir root won't be added to lychee, please move them in a subfolder: {}".format(
+                        root)
+                    logger.warn(msg)
+                    continue
 
+                album['id'] = self.dao.albumExistsByNameAndParent(album['name'], album['parent'])
 
-                    album['id'] = self.dao.albumExists(album)
+                if self.conf['replace'] and album['id']:
+                    # drop album photos
+                    filelist = self.dao.eraseAlbum(album['id'])
+                    self.deleteFiles(filelist)
+                    assert self.dao.dropAlbum(album['id'])
+                    # Album should be recreated
+                    album['id'] = False
 
-                    if self.conf['replace'] and album['id']:
-                        # drop album photos
-                        filelist = self.dao.eraseAlbum(album['id'])
-                        self.deleteFiles(filelist)
-                        assert self.dao.dropAlbum(album['id'])
-                        # Album should be recreated
-                        album['id'] = False
+                if not (album['id']):
+                    # create album
+                    album['id'] = createAlbum(self, album)
 
                     if not (album['id']):
-                        # create album
-                        album['id'] = createAlbum(self, album)
+                        logger.error("didn't manage to create album for: " + album['name'])
+                        continue
+                    else:
+                        logger.info("############ Album created: %s", album['name'])
 
-                        if not (album['id']):
-                            logger.error("didn't manage to create album for: " + album['name'])
-                            continue
-                        else:
-                            logger.info("############ Album created: %s", album['name'])
+                    createdalbums += 1
 
-                        createdalbums += 1
+                # Albums are created or emptied, now take care of photos
+                for f in sorted(files):
 
-                    # Albums are created or emptied, now take care of photos
-                    for f in sorted(files):
+                    if isAPhoto(self, f):
+                        try:
+                            discoveredphotos += 1
+                            error = False
+                            logger.debug(
+                                "**** Trying to add to lychee album %s: %s",
+                                album['name'],
+                                os.path.join(
+                                    root,
+                                    f))
+                            # corruption detected here by launching exception
+                            photo = LycheePhoto(self.conf, f, album)
+                            if not (self.dao.photoExists(photo)):
+                                res = copyFileToLychee(self, photo)
+                                adjustRotation(self, photo)
+                                makeThumbnail(self, photo)
+                                res = self.dao.addFileToAlbum(photo)
+                                # increment counter
+                                if res:
+                                    importedphotos += 1
+                                    album['photos'].append(photo)
+                                else:
+                                    error = True
+                                    logger.error(
+                                        "while adding to album: %s photo: %s",
+                                        album['name'],
+                                        photo.srcfullpath)
+                            else:
+                                logger.warn(
+                                    "photo already exists in this album with same name or same checksum: %s it won't be added to lychee",
+                                    photo.srcfullpath)
+                                error = True
+                        except Exception as e:
 
-                        if isAPhoto(self, f):
-                            try:
-                                discoveredphotos += 1
-                                error = False
-                                logger.debug(
-                                    "**** Trying to add to lychee album %s: %s",
-                                    album['name'],
+                            logger.exception(e)
+                            logger.error("could not add %s to album %s", f, album['name'])
+                            error = True
+                        finally:
+                            if not (error):
+                                logger.info(
+                                    "**** Successfully added %s to lychee album %s",
                                     os.path.join(
                                         root,
-                                        f))
-                                # corruption detected here by launching exception
-                                photo = LycheePhoto(self.conf, f, album)
-                                if not (self.dao.photoExists(photo)):
-                                    res = copyFileToLychee(self, photo)
-                                    adjustRotation(self, photo)
-                                    makeThumbnail(self, photo)
-                                    res = self.dao.addFileToAlbum(photo)
-                                    # increment counter
-                                    if res:
-                                        importedphotos += 1
-                                        album['photos'].append(photo)
-                                    else:
-                                        error = True
-                                        logger.error(
-                                            "while adding to album: %s photo: %s",
-                                            album['name'],
-                                            photo.srcfullpath)
-                                else:
-                                    logger.warn(
-                                        "photo already exists in this album with same name or same checksum: %s it won't be added to lychee",
-                                        photo.srcfullpath)
-                                    error = True
-                            except Exception as e:
+                                        f),
+                                    album['name'])
 
-                                logger.exception(e)
-                                logger.error("could not add %s to album %s", f, album['name'])
-                                error = True
-                            finally:
-                                if not (error):
-                                    logger.info(
-                                        "**** Successfully added %s to lychee album %s",
-                                        os.path.join(
-                                            root,
-                                            f),
-                                        album['name'])
-
-                    a = album.copy()
-                    albums.append(a)
-                    logger.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-                    logger.info("Directory scanned:" + self.conf['srcdir'])
-                    logger.info("Created albums: " + str(createdalbums))
-                    if (importedphotos == discoveredphotos):
-                        logger.info(
-                            str(importedphotos) + " photos imported on " + str(discoveredphotos) + " discovered")
-                    else:
-                        logger.error(
-                            str(importedphotos) + " photos imported on " + str(discoveredphotos) + " discovered")
-                    logger.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+                a = album.copy()
+                albums.append(a)
+                logger.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+                logger.info("Directory scanned:" + self.conf['srcdir'])
+                logger.info("Created albums: " + str(createdalbums))
+                if (importedphotos == discoveredphotos):
+                    logger.info(
+                        str(importedphotos) + " photos imported on " + str(discoveredphotos) + " discovered")
+                else:
+                    logger.error(
+                        str(importedphotos) + " photos imported on " + str(discoveredphotos) + " discovered")
+                logger.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
             updateAlbumsDate(self, albums)
         if self.conf['sort']:
             reorderalbumids(self, albums)
