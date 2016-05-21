@@ -567,6 +567,7 @@ class LycheeDAO:
         try:
             stamp = parse(photo.exif.takedate + ' ' + photo.exif.taketime).strftime('%s')
         except Exception as e:
+
             stamp = datetime.datetime.now().strftime('%s')
 
         query = ("insert into lychee_photos " +
@@ -574,14 +575,14 @@ class LycheeDAO:
                  "size, star, " +
                  "thumbUrl, album,iso, aperture, make, " +
                  "model, shutter, focal, takestamp, " +
-                 "description, title, checksum) " +
+                 "description, title, checksum, tags) " +
                  "values " +
                  "({}, '{}', {}, '{}', {}, {}, " +
                  "'{}', {}, " +
                  "'{}', '{}', '{}', '{}'," +
                  " '{}', " +
                  "'{}', '{}', '{}', '{}', " +
-                 "'{}', %s, '{}')"
+                 "'{}', %s, '{}', '{}')"
                  ).format(photo.id, photo.url, self.conf["publicAlbum"], photo.type, photo.width, photo.height,
                           photo.size, photo.star,
                           photo.thumbUrl, photo.albumid,
@@ -589,7 +590,7 @@ class LycheeDAO:
                           photo.exif.aperture,
                           photo.exif.make,
                           photo.exif.model, photo.exif.shutter, photo.exif.focal, stamp,
-                          photo.description, photo.checksum)
+                          photo.description, photo.checksum, photo.tags)
         try:
             logger.debug(query)
             cur = self.db.cursor()
@@ -631,8 +632,8 @@ class LycheeDAO:
         """
         try:
             cur = self.db.cursor()
-            cur.execute("delete from lychee_albums")
-            cur.execute("delete from lychee_photos")
+            cur.execute("TRUNCATE TABLE lychee_albums")
+            cur.execute("TRUNCATE TABLE lychee_photos")
             self.db.commit()
         except Exception as e:
             logger.exception(e)

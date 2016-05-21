@@ -7,3 +7,4 @@ pytest-cov==2.2.0
 pytest-pep8==1.0.6
 piexif==1.0.3
 watchdog==0.8.3
+py3exiv2
