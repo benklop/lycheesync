@@ -228,11 +228,11 @@ class LycheePhoto:
                 self.exif.exposure = metadata['Exif.Photo.ExposureTime'].value
             if "Exif.Photo.ExposureTime" in metadata.exif_keys:
                 s = metadata['Exif.Photo.ExposureTime'].value
-                s = Fraction(int(decimal.Decimal(s.numerator / 10).quantize(decimal.Decimal('1'),
-                                                                            rounding=decimal.ROUND_HALF_EVEN))
-                             , int(decimal.Decimal(s.denominator / 10).quantize(decimal.Decimal('1'),
-                                                                                rounding=decimal.ROUND_HALF_EVEN)))
-                self.exif.shutter = str(s) + " s"
+                s = Fraction(int(decimal.Decimal(s.numerator / s.numerator).quantize(decimal.Decimal('1'),
+                                                                                     rounding=decimal.ROUND_HALF_EVEN))
+                             , int(decimal.Decimal(s.denominator / s.numerator).quantize(decimal.Decimal('1'),
+                                                                                         rounding=decimal.ROUND_HALF_EVEN)))
+                self.exif.shutter = str(s)
             if "Exif.Photo.DateTimeOriginal" in metadata.exif_keys:
                 try:
                     self.exif.takedate = metadata['Exif.Photo.DateTimeOriginal'].raw_value.split(" ")[0]
