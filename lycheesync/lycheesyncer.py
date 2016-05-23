@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 import os
 import shutil
 
+import pyexiv2
 from PIL import Image
 from PIL import ImageFile
 from pathtools.patterns import match_path
@@ -21,7 +22,6 @@ import datetime
 import time
 import sys
 import logging
-import piexif
 
 logger = logging.getLogger(__name__)
 
@@ -626,42 +626,42 @@ def adjustRotation(self, photo):
     """
 
     if photo.exif.orientation != 1:
+        metadata = pyexiv2.ImageMetadata(self.srcfullpath)
 
+        metadata.read()
         img = Image.open(photo.destfullpath)
-        if "exif" in img.info:
-            exif_dict = piexif.load(img.info["exif"])
 
-            if piexif.ImageIFD.Orientation in exif_dict["0th"]:
-                orientation = exif_dict["0th"][piexif.ImageIFD.Orientation]
+        if "Exif.Image.Orientation" in metadata.exif_keys:
+            orientation = metadata['Exif.Image.Orientation'].value
 
-                if orientation == 2:
-                    img = img.transpose(Image.FLIP_LEFT_RIGHT)
-                elif orientation == 3:
-                    img = img.rotate(180)
-                elif orientation == 4:
-                    img = img.rotate(180).transpose(Image.FLIP_LEFT_RIGHT)
-                elif orientation == 5:
-                    img = img.rotate(-90, expand=True).transpose(Image.FLIP_LEFT_RIGHT)
-                elif orientation == 6:
-                    img = img.rotate(-90, expand=True)
-                elif orientation == 7:
-                    img = img.rotate(90, expand=True).transpose(Image.FLIP_LEFT_RIGHT)
-                elif orientation == 8:
-                    img = img.rotate(90, expand=True)
-                else:
-                    if orientation != 1:
-                        logger.warn("Orientation not defined {} for photo {}".format(orientation, photo.title))
+            if orientation == 2:
+                img = img.transpose(Image.FLIP_LEFT_RIGHT)
+            elif orientation == 3:
+                img = img.rotate(180)
+            elif orientation == 4:
+                img = img.rotate(180).transpose(Image.FLIP_LEFT_RIGHT)
+            elif orientation == 5:
+                img = img.rotate(-90, expand=True).transpose(Image.FLIP_LEFT_RIGHT)
+            elif orientation == 6:
+                img = img.rotate(-90, expand=True)
+            elif orientation == 7:
+                img = img.rotate(90, expand=True).transpose(Image.FLIP_LEFT_RIGHT)
+            elif orientation == 8:
+                img = img.rotate(90, expand=True)
+            else:
+                if orientation != 1:
+                    logger.warn("Orientation not defined {} for photo {}".format(orientation, photo.title))
 
-                if orientation in [5, 6, 7, 8]:
-                    # invert width and height
-                    h = photo.height
-                    w = photo.width
-                    photo.height = w
-                    photo.width = h
-                exif_dict["0th"][piexif.ImageIFD.Orientation] = 1
-                exif_bytes = piexif.dump(exif_dict)
-                img.save(photo.destfullpath, exif=exif_bytes, quality=99)
+            if orientation in [5, 6, 7, 8]:
+                # invert width and height
+                h = photo.height
+                w = photo.width
+                photo.height = w
+                photo.width = h
+                metadata['Exif.Image.Orientation'].value = 1
+            img.save(photo.destfullpath, quality=99)
         img.close()
+        metadata.write(preserve_timestamps=True)
 
 
 def reorderalbumids(self, albums):

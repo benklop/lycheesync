@@ -180,7 +180,8 @@ class LycheePhoto:
 
         # Auto file some properties
         self.type = mimetypes.guess_type(self.originalname, False)[0]
-        self.size = os.path.getsize(self.srcfullpath)
+        self.size = decimal.Decimal(os.path.getsize(self.srcfullpath)).quantize(decimal.Decimal('.01'),
+                                                                                rounding=decimal.ROUND_05UP)
         self.size = str(self.size / 1024) + " KB"
         # Default date
         takedate = datetime.date.today().isoformat()
@@ -222,16 +223,22 @@ class LycheePhoto:
                 self.exif.focal = decimal.Decimal(focal).quantize(decimal.Decimal('0.1'), rounding=decimal.ROUND_05UP)
             if "Exif.Photo.ISOSpeedRatings" in metadata.exif_keys:
                 self.exif.iso = metadata['Exif.Photo.ISOSpeedRatings'].value
-            if "Exif.Photo.Model" in metadata.exif_keys:
+            if "Exif.Image.Model" in metadata.exif_keys:
                 self.exif.model = metadata['Exif.Image.Model'].value
             if "Exif.Photo.ExposureTime" in metadata.exif_keys:
                 self.exif.exposure = metadata['Exif.Photo.ExposureTime'].value
             if "Exif.Photo.ExposureTime" in metadata.exif_keys:
                 s = metadata['Exif.Photo.ExposureTime'].value
-                s = Fraction(int(decimal.Decimal(s.numerator / s.numerator).quantize(decimal.Decimal('1'),
-                                                                                     rounding=decimal.ROUND_HALF_EVEN))
-                             , int(decimal.Decimal(s.denominator / s.numerator).quantize(decimal.Decimal('1'),
-                                                                                         rounding=decimal.ROUND_HALF_EVEN)))
+                numer = s.numerator
+                denom = s.denominator
+                if denom / numer >= 1:
+                    s = Fraction(int(decimal.Decimal(s.numerator / s.numerator).quantize(decimal.Decimal('1'),
+                                                                                         rounding=decimal.ROUND_HALF_EVEN))
+                                 , int(decimal.Decimal(s.denominator / s.numerator).quantize(decimal.Decimal('1'),
+                                                                                             rounding=decimal.ROUND_HALF_EVEN)))
+                else:
+                    s *= 1.0
+                    s = int(s)
                 self.exif.shutter = str(s)
             if "Exif.Photo.DateTimeOriginal" in metadata.exif_keys:
                 try:
@@ -260,11 +267,11 @@ class LycheePhoto:
                     logger.warn('DT invalid taketime: ' + str(
                         metadata['Exif.Photo.DateTime'].raw_value) + ' for ' + self.srcfullpath)
             if "Iptc.Application2.ObjectName" in metadata.iptc_keys:
-                self.title = metadata['Iptc.Application2.ObjectName'].value or self.originalname
+                self.title = metadata['Iptc.Application2.ObjectName'].raw_value or self.originalname
             if "Xmp.xmp.Rating" in metadata.xmp_keys:
-                self.star = metadata['Xmp.xmp.Rating'].value or "0"
+                self.star = int(metadata['Xmp.xmp.Rating'].raw_value) or 0
             if "Iptc.Application2.Caption" in metadata.iptc_keys:
-                self.description = metadata['Iptc.Application2.Caption'].value or ""
+                self.description = metadata['Iptc.Application2.Caption'].raw_value or ""
             if "Iptc.Application2.Keywords" in metadata.iptc_keys:
                 tags = metadata['Iptc.Application2.Keywords'].value or {""}
                 self.tags = ','.join(tags)

@@ -579,22 +579,23 @@ class LycheeDAO:
                  "values " +
                  "({}, '{}', {}, '{}', {}, {}, " +
                  "'{}', {}, " +
-                 "'{}', '{}', '{}', '{}'," +
-                 " '{}', " +
-                 "'{}', '{}', '{}', '{}', " +
-                 "'{}', %s, '{}', '{}')"
+                 "'{}', '{}', %s, %s," +
+                 " %s, " +
+                 "%s, %s, %s, '{}', " +
+                 "%s, %s, '{}', %s)"
                  ).format(photo.id, photo.url, self.conf["publicAlbum"], photo.type, photo.width, photo.height,
                           photo.size, photo.star,
                           photo.thumbUrl, photo.albumid,
-                          photo.exif.iso,
-                          photo.exif.aperture,
-                          photo.exif.make,
-                          photo.exif.model, photo.exif.shutter, photo.exif.focal, stamp,
-                          photo.description, photo.checksum, photo.tags)
+                          stamp,
+                          photo.checksum)
         try:
             logger.debug(query)
             cur = self.db.cursor()
-            res = cur.execute(query, (photo.originalname))
+            res = cur.execute(query, (photo.exif.iso,
+                                      photo.exif.aperture,
+                                      photo.exif.make,
+                                      photo.exif.model, photo.exif.shutter, photo.exif.focal,
+                                      photo.description, photo.originalname, photo.tags))
             self.db.commit()
         except Exception as e:
             logger.exception(e)
