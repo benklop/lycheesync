@@ -202,8 +202,9 @@ class LycheePhoto:
             else:
                 img = Image.open(self.srcfullpath)
                 w, h = img.size
-                metadata['Exif.Photo.PixelXDimension'].value = w
-                metadata['Exif.Photo.PixelYDimension'].value = h
+                metadata['Exif.Photo.PixelXDimension'] = pyexiv2.ExifTag('Exif.Photo.PixelXDimension', w)
+                metadata['Exif.Photo.PixelYDimension'] = pyexiv2.ExifTag('Exif.Photo.PixelYDimension', h)
+
                 metadata.write()
 
             self.width = float(w)
