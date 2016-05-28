@@ -15,6 +15,7 @@ import time
 from fractions import Fraction
 
 import pyexiv2
+from PIL import Image
 from dateutil.parser import parse
 
 logger = logging.getLogger(__name__)
@@ -195,8 +196,15 @@ class LycheePhoto:
             metadata = pyexiv2.ImageMetadata(self.srcfullpath)
 
             metadata.read()
-            w = metadata['Exif.Photo.PixelXDimension'].value
-            h = metadata['Exif.Photo.PixelYDimension'].value
+            if "Exif.Photo.PixelXDimension" in metadata.exif_keys:
+                w = metadata['Exif.Photo.PixelXDimension'].value
+                h = metadata['Exif.Photo.PixelYDimension'].value
+            else:
+                img = Image.open(self.srcfullpath)
+                w, h = img.size
+                metadata['Exif.Photo.PixelXDimension'].value = w
+                metadata['Exif.Photo.PixelYDimension'].value = h
+                metadata.write()
 
             self.width = float(w)
             self.height = float(h)

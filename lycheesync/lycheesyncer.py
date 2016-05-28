@@ -626,7 +626,7 @@ def adjustRotation(self, photo):
     """
 
     if photo.exif.orientation != 1:
-        metadata = pyexiv2.ImageMetadata(self.srcfullpath)
+        metadata = pyexiv2.ImageMetadata(photo.srcfullpath)
 
         metadata.read()
         img = Image.open(photo.destfullpath)
