@@ -353,6 +353,9 @@ class LycheeDAO:
             logger.debug("album photos erased: %s", album_id)
         except Exception as e:
             logger.exception(e)
+            logger.error(album_id)
+            logger.error(query)
+            logger.error(selquery)
             logger.error("eraseAlbum")
         finally:
             return res
@@ -424,7 +427,10 @@ class LycheeDAO:
                  photo.originalname,
                  photo.checksum))
             row = cur.fetchone()
-            p = {'url': row['url'], 'id': row['id'], 'album': row['album']}
+            if row is not None:
+                p = {'url': row['url'], 'id': row['id'], 'album': row['album']}
+            else:
+                p = None
         except Exception as e:
             logger.exception(e)
         finally:
@@ -440,7 +446,10 @@ class LycheeDAO:
                  name,
                  checksum))
             row = cur.fetchone()
-            p = {'url': row['url'], 'id': row['id'], 'album': row['album']}
+            if row is not None:
+                p = {'url': row['url'], 'id': row['id'], 'album': row['album']}
+            else:
+                p = None
 
         except Exception as e:
             logger.exception(e)

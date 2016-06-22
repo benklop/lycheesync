@@ -315,6 +315,7 @@ class MyEventHandler(FileSystemEventHandler):
 
             albSrc = getAlbum(self, event.src_path)
             albDest = getAlbum(self, event.dest_path)
+            logger.info("%s Album moved to %s. ", event.src_path, event.dest_path)
             self.dao.setAlbumParentAndTitle(albDest['name'], albDest['parent'], albSrc['id'])
             return
         else:
@@ -333,7 +334,7 @@ class MyEventHandler(FileSystemEventHandler):
                 dbPhoto = self.dao.get_photo_light(album['id'], os.sep.join(dirs[-1:]), "")
 
                 album2 = getAlbum(self, albDir2)
-
+                logger.info("%s Photo moved to %s. ", event.src_path, event.dest_path)
                 self.dao.setPhotoAlbumAndTitle(os.sep.join(dirs2[-1:]), album2['id'], dbPhoto['id'])
 
 
@@ -348,6 +349,7 @@ class MyEventHandler(FileSystemEventHandler):
 
         if event.is_directory:
             album = getAlbum(self, event.src_path)
+            logger.info("Created album: %s.", album['name'])
             self.dao.createAlbum(album)
             return
 
@@ -367,6 +369,7 @@ class MyEventHandler(FileSystemEventHandler):
                     adjustRotation(self, photo)
                     makeThumbnail(self, photo)
                     res = self.dao.addFileToAlbum(photo)
+                    logger.info("Created Photo: %s.", photo.srcfullpath)
                     # increment counter
                     if not res:
                         logger.error(
@@ -385,9 +388,14 @@ class MyEventHandler(FileSystemEventHandler):
         self.dao = LycheeDAO(self.conf)
         if event.is_directory:
             album = getAlbum(self, event.src_path)
-            filelist = self.dao.eraseAlbum(album['id'])
-            deleteFiles(self, filelist)
-            assert self.dao.dropAlbum(album['id'])
+            if album['id'] is not None:
+                filelist = self.dao.eraseAlbum(album['id'])
+                deleteFiles(self, filelist)
+                logger.info("Deleted album: %s.", album['name'])
+                assert self.dao.dropAlbum(album['id'])
+            else:
+                logger.error("Tried to delete album: %s, but it wasn't present in the DB", album['name'])
+
             return
         else:
             if match_path(event.src_path,
@@ -399,9 +407,12 @@ class MyEventHandler(FileSystemEventHandler):
                 album = getAlbum(self, albDir)
                 album['path'] = albDir
                 dbPhoto = self.dao.get_photo_light(album['id'], os.sep.join(dirs[-1:]), "")
-                delete = [dbPhoto]
-                deletePhotos(self, delete)
-
+                if dbPhoto is not None:
+                    delete = [dbPhoto]
+                    deletePhotos(self, delete)
+                    logger.info("Deleted Photo: %s.", os.sep.join(dirs[-1:]))
+                else:
+                    logger.info("Tried to delete Photo: %s, but it wasn't in the database.", os.sep.join(dirs[-1:]))
             return
 
     def on_modified(self, event):
@@ -421,8 +432,9 @@ class MyEventHandler(FileSystemEventHandler):
                 album['path'] = albDir
                 photo = LycheePhoto(self.conf, os.sep.join(dirs[-1:]), album)
                 dbPhoto = self.dao.get_photo(photo)
-                delete = [dbPhoto]
-                deletePhotos(self, delete)
+                if dbPhoto is not None:
+                    delete = [dbPhoto]
+                    deletePhotos(self, delete)
 
                 dirs = event.src_path.split(os.sep)
                 albDir = os.sep.join(dirs[:-1])
@@ -435,6 +447,7 @@ class MyEventHandler(FileSystemEventHandler):
                     adjustRotation(self, photo)
                     makeThumbnail(self, photo)
                     res = self.dao.addFileToAlbum(photo)
+                    logger.info("Modified Photo: %s.", photo.srcfullpath)
                     # increment counter
                     if not res:
                         logger.error(
@@ -739,6 +752,5 @@ def remove_file(path):
     except Exception as e:
         logger.warn("problem removing: " + path)
         logger.debug(e)
-
 
 
