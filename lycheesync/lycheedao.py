@@ -299,7 +299,7 @@ class LycheeDAO:
         album['id'] = None
 
         query = (
-            "insert into lychee_albums (title, sysstamp, public, password,parent) values ('{}',{},'{}',NULL,'{}')"
+            "insert into lychee_albums (title, sysstamp, public, password, parent) values ('{}',{},'{}',NULL,'{}')"
                 .format(
                 album['name'],
                 datetime.datetime.now().strftime('%s'),
@@ -312,7 +312,7 @@ class LycheeDAO:
             cur = self.db.cursor()
             logger.debug("try to createAlbum: %s", query)
             cur.execute(
-                "insert into lychee_albums (title, sysstamp, public, password,parent) values (%s,%s,%s,NULL,%s)",
+                "insert into lychee_albums (title, sysstamp, public, password, parent) values (%s,%s,%s,NULL,%s)",
                 (
                     album['name'],
                     datetime.datetime.now().strftime('%s'),
@@ -362,7 +362,7 @@ class LycheeDAO:
 
     def setAlbumParentAndTitle(self, title, parents, id):
         res = True
-        album_query = "update lychee_albums set title = '" + str(title) + "',parent='" + str(
+        album_query = "update lychee_albums set title = '" + str(title) + "', parent='" + str(
             parents) + "' where id = " + str(id)
         try:
             cur = self.db.cursor()
@@ -376,7 +376,7 @@ class LycheeDAO:
 
     def setPhotoAlbumAndTitle(self, title, Album, id):
         res = True
-        album_query = "update lychee_photos set title = '" + str(title) + "',album='" + str(
+        album_query = "update lychee_photos set title = '" + str(title) + "', album='" + str(
             Album) + "' where id='" + str(id) + "'"
         try:
             cur = self.db.cursor()

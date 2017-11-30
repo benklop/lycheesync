@@ -465,16 +465,16 @@ def getAlbum(self, directory):
     album = {'id': None, 'name': None, 'photos': [], 'parent': '0'}
 
     dirs = directory.split(os.sep)
-    parents = ['0']
+    parent = '0'
     for title in dirs:
         album['id'] = None
 
         album['name'] = title
         if self.dao.albumExistsByNameAndParent(title, album['parent']):
             album['id'] = self.dao.get_album_id(title, album['parent'])['id']
-            parents.append(str(album['id']))
-            album['parent'] = ','.join(parents)
-    album['parent'] = ','.join(parents)
+            parent = album['id']
+            album['parent'] = parent
+    album['parent'] = parent
 
     return album
 
